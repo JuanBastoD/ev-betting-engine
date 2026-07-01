@@ -1,9 +1,17 @@
 from collections.abc import AsyncGenerator
+from datetime import datetime, timezone
 
+import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 from sqlalchemy.pool import StaticPool
 
+from src.domain.entities.bookmaker import Bookmaker
+from src.domain.entities.league import League
+from src.domain.entities.market_type import MarketType
+from src.domain.entities.match import Match
+from src.domain.entities.selection import Selection
+from src.domain.entities.team import Team
 from src.infrastructure.persistence.models import Base
 
 
@@ -45,3 +53,44 @@ async def session(engine: AsyncEngine) -> AsyncGenerator[AsyncSession, None]:
         await async_session.close()
         await transaction.rollback()
         await connection.close()
+
+
+@pytest.fixture
+def home_team() -> Team:
+    return Team(id="team-home", name="River Plate", country="Argentina")
+
+
+@pytest.fixture
+def away_team() -> Team:
+    return Team(id="team-away", name="Boca Juniors", country="Argentina")
+
+
+@pytest.fixture
+def league() -> League:
+    return League(id="league-1", name="Liga Profesional", country="Argentina")
+
+
+@pytest.fixture
+def kickoff_utc() -> datetime:
+    return datetime(2026, 8, 15, 20, 0, tzinfo=timezone.utc)
+
+
+@pytest.fixture
+def match(home_team: Team, away_team: Team, league: League, kickoff_utc: datetime) -> Match:
+    return Match(
+        id="match-1",
+        home_team=home_team,
+        away_team=away_team,
+        league=league,
+        kickoff_utc=kickoff_utc,
+    )
+
+
+@pytest.fixture
+def bookmaker() -> Bookmaker:
+    return Bookmaker(name="Pinnacle", is_sharp=True, region="EU")
+
+
+@pytest.fixture
+def selection() -> Selection:
+    return Selection(market_type=MarketType.MATCH_WINNER_1X2, outcome="Home")
