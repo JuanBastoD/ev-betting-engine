@@ -7,6 +7,8 @@ from src.domain.entities.league import League
 from src.domain.entities.market_type import MarketType
 from src.domain.entities.match import Match
 from src.domain.entities.odds_quote import OddsQuote
+from src.domain.entities.player import Player
+from src.domain.entities.player_match_stats import PlayerMatchStats
 from src.domain.entities.selection import Selection
 from src.domain.entities.team import Team
 from src.domain.entities.team_form import TeamForm
@@ -24,6 +26,10 @@ from src.infrastructure.persistence.mappers import (
     match_to_model,
     odds_quote_from_model,
     odds_quote_to_model,
+    player_from_model,
+    player_match_stats_from_model,
+    player_match_stats_to_model,
+    player_to_model,
     team_form_from_model,
     team_form_to_model,
     team_from_model,
@@ -132,3 +138,76 @@ def test_value_bet_round_trip(
     restored = value_bet_from_model(model)
 
     assert restored == value_bet
+
+
+def test_player_round_trip(player: Player, home_team: Team) -> None:
+    model = player_to_model(player)
+    model.team = team_to_model(home_team)
+
+    restored = player_from_model(model)
+
+    assert restored == player
+
+
+def test_player_match_stats_round_trip(
+    match: Match, home_team: Team, away_team: Team, league: League, player: Player
+) -> None:
+    stats = PlayerMatchStats(
+        match=match,
+        player=player,
+        minutes_played=90,
+        started=True,
+        shots_total=4,
+        shots_on_target=2,
+        goals=1,
+        assists=1,
+        yellow_cards=1,
+        red_cards=0,
+        corners_won=3,
+    )
+
+    model = player_match_stats_to_model(stats)
+    match_model = match_to_model(match)
+    match_model.home_team = team_to_model(home_team)
+    match_model.away_team = team_to_model(away_team)
+    match_model.league = league_to_model(league)
+    model.match = match_model
+    player_model = player_to_model(player)
+    player_model.team = team_to_model(home_team)
+    model.player = player_model
+
+    restored = player_match_stats_from_model(model)
+
+    assert restored == stats
+
+
+def test_player_match_stats_round_trip_without_corners_won(
+    match: Match, home_team: Team, away_team: Team, league: League, player: Player
+) -> None:
+    stats = PlayerMatchStats(
+        match=match,
+        player=player,
+        minutes_played=15,
+        started=False,
+        shots_total=1,
+        shots_on_target=0,
+        goals=0,
+        assists=0,
+        yellow_cards=0,
+        red_cards=0,
+    )
+
+    model = player_match_stats_to_model(stats)
+    match_model = match_to_model(match)
+    match_model.home_team = team_to_model(home_team)
+    match_model.away_team = team_to_model(away_team)
+    match_model.league = league_to_model(league)
+    model.match = match_model
+    player_model = player_to_model(player)
+    player_model.team = team_to_model(home_team)
+    model.player = player_model
+
+    restored = player_match_stats_from_model(model)
+
+    assert restored == stats
+    assert restored.corners_won is None

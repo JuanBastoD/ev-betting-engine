@@ -11,6 +11,8 @@ EXPECTED_TABLES = {
     "odds_quotes",
     "team_forms",
     "value_bets",
+    "players",
+    "player_match_stats",
 }
 
 
@@ -39,6 +41,9 @@ def test_frequently_queried_columns_are_indexed() -> None:
     assert "bookmaker_id" in _indexed_column_names("odds_quotes")
     assert "match_id" in _indexed_column_names("value_bets")
     assert "team_id" in _indexed_column_names("team_forms")
+    assert "team_id" in _indexed_column_names("players")
+    assert "match_id" in _indexed_column_names("player_match_stats")
+    assert "player_id" in _indexed_column_names("player_match_stats")
 
 
 def test_bookmaker_name_is_unique() -> None:

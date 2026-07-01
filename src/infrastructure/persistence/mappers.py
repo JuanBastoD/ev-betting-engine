@@ -10,6 +10,9 @@ from src.domain.entities.league import League
 from src.domain.entities.market_type import MarketType
 from src.domain.entities.match import Match
 from src.domain.entities.odds_quote import OddsQuote
+from src.domain.entities.player import Player
+from src.domain.entities.player_match_stats import PlayerMatchStats
+from src.domain.entities.player_position import PlayerPosition
 from src.domain.entities.selection import Selection
 from src.domain.entities.team import Team
 from src.domain.entities.team_form import TeamForm
@@ -23,6 +26,8 @@ from src.infrastructure.persistence.models import (
     LeagueModel,
     MatchModel,
     OddsQuoteModel,
+    PlayerMatchStatsModel,
+    PlayerModel,
     TeamFormModel,
     TeamModel,
     ValueBetModel,
@@ -149,4 +154,54 @@ def value_bet_from_model(model: ValueBetModel) -> ValueBet:
         fair_probability=Probability(model.fair_probability),
         edge=EdgePercentage(model.edge_percentage),
         suggested_stake=Stake(model.suggested_stake),
+    )
+
+
+def player_to_model(player: Player) -> PlayerModel:
+    return PlayerModel(
+        id=player.id,
+        name=player.name,
+        team_id=player.team.id,
+        position=player.position.value,
+    )
+
+
+def player_from_model(model: PlayerModel) -> Player:
+    return Player(
+        id=model.id,
+        name=model.name,
+        team=team_from_model(model.team),
+        position=PlayerPosition(model.position),
+    )
+
+
+def player_match_stats_to_model(stats: PlayerMatchStats) -> PlayerMatchStatsModel:
+    return PlayerMatchStatsModel(
+        match_id=stats.match.id,
+        player_id=stats.player.id,
+        minutes_played=stats.minutes_played,
+        started=stats.started,
+        shots_total=stats.shots_total,
+        shots_on_target=stats.shots_on_target,
+        goals=stats.goals,
+        assists=stats.assists,
+        yellow_cards=stats.yellow_cards,
+        red_cards=stats.red_cards,
+        corners_won=stats.corners_won,
+    )
+
+
+def player_match_stats_from_model(model: PlayerMatchStatsModel) -> PlayerMatchStats:
+    return PlayerMatchStats(
+        match=match_from_model(model.match),
+        player=player_from_model(model.player),
+        minutes_played=model.minutes_played,
+        started=model.started,
+        shots_total=model.shots_total,
+        shots_on_target=model.shots_on_target,
+        goals=model.goals,
+        assists=model.assists,
+        yellow_cards=model.yellow_cards,
+        red_cards=model.red_cards,
+        corners_won=model.corners_won,
     )

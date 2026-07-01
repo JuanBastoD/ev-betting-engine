@@ -139,3 +139,35 @@ class ValueBetModel(Base):
     suggested_stake: Mapped[float] = mapped_column(Float, nullable=False)
 
     match: Mapped[MatchModel] = relationship(lazy="selectin")
+
+
+class PlayerModel(Base):
+    __tablename__ = "players"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    team_id: Mapped[str] = mapped_column(ForeignKey("teams.id"), nullable=False, index=True)
+    # PlayerPosition (domain enum) stored as its string value.
+    position: Mapped[str] = mapped_column(String(32), nullable=False)
+
+    team: Mapped[TeamModel] = relationship(lazy="selectin")
+
+
+class PlayerMatchStatsModel(Base):
+    __tablename__ = "player_match_stats"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    match_id: Mapped[str] = mapped_column(ForeignKey("matches.id"), nullable=False, index=True)
+    player_id: Mapped[str] = mapped_column(ForeignKey("players.id"), nullable=False, index=True)
+    minutes_played: Mapped[int] = mapped_column(Integer, nullable=False)
+    started: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    shots_total: Mapped[int] = mapped_column(Integer, nullable=False)
+    shots_on_target: Mapped[int] = mapped_column(Integer, nullable=False)
+    goals: Mapped[int] = mapped_column(Integer, nullable=False)
+    assists: Mapped[int] = mapped_column(Integer, nullable=False)
+    yellow_cards: Mapped[int] = mapped_column(Integer, nullable=False)
+    red_cards: Mapped[int] = mapped_column(Integer, nullable=False)
+    corners_won: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    match: Mapped[MatchModel] = relationship(lazy="selectin")
+    player: Mapped[PlayerModel] = relationship(lazy="selectin")

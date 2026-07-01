@@ -10,6 +10,8 @@ from src.domain.entities.bookmaker import Bookmaker
 from src.domain.entities.league import League
 from src.domain.entities.market_type import MarketType
 from src.domain.entities.match import Match
+from src.domain.entities.player import Player
+from src.domain.entities.player_position import PlayerPosition
 from src.domain.entities.selection import Selection
 from src.domain.entities.team import Team
 from src.infrastructure.persistence.models import Base
@@ -94,3 +96,8 @@ def bookmaker() -> Bookmaker:
 @pytest.fixture
 def selection() -> Selection:
     return Selection(market_type=MarketType.MATCH_WINNER_1X2, outcome="Home")
+
+
+@pytest.fixture
+def player(home_team: Team) -> Player:
+    return Player(id="player-1", name="Julian Alvarez", team=home_team, position=PlayerPosition.FORWARD)

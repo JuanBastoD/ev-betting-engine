@@ -13,9 +13,21 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.domain.entities.bookmaker import Bookmaker
 from src.domain.entities.league import League
 from src.domain.entities.match import Match
+from src.domain.entities.player import Player
 from src.domain.entities.team import Team
-from src.infrastructure.persistence.mappers import league_to_model, match_to_model, team_to_model
-from src.infrastructure.persistence.models import BookmakerModel, LeagueModel, MatchModel, TeamModel
+from src.infrastructure.persistence.mappers import (
+    league_to_model,
+    match_to_model,
+    player_to_model,
+    team_to_model,
+)
+from src.infrastructure.persistence.models import (
+    BookmakerModel,
+    LeagueModel,
+    MatchModel,
+    PlayerModel,
+    TeamModel,
+)
 
 
 async def upsert_team(session: AsyncSession, team: Team) -> None:
@@ -67,4 +79,18 @@ async def upsert_match(session: AsyncSession, match: Match) -> None:
         model.away_team_id = match.away_team.id
         model.league_id = match.league.id
         model.kickoff_utc = match.kickoff_utc
+    await session.flush()
+
+
+async def upsert_player(session: AsyncSession, player: Player) -> None:
+    await upsert_team(session, player.team)
+    await session.flush()
+
+    model = await session.get(PlayerModel, player.id)
+    if model is None:
+        session.add(player_to_model(player))
+    else:
+        model.name = player.name
+        model.team_id = player.team.id
+        model.position = player.position.value
     await session.flush()
