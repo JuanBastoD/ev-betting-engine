@@ -218,3 +218,62 @@ def test_team_form_from_score_events_keeps_only_the_most_recent_ten() -> None:
     assert form.wins == 10
     assert form.goals_for == 10
     assert form.goals_against == 0
+
+
+def test_team_form_from_score_events_skips_events_with_a_non_numeric_score() -> None:
+    team = Team(id="team-x", name="Team X")
+    events = [
+        ScoreEventDTO(
+            id="malformed-score",
+            sport_key="soccer_epl",
+            commence_time=datetime(2026, 6, 1, tzinfo=timezone.utc),
+            completed=True,
+            home_team="Team X",
+            away_team="Opponent",
+            scores=[
+                ScoreEntryDTO(name="Team X", score="TBD"),
+                ScoreEntryDTO(name="Opponent", score="0"),
+            ],
+        ),
+        ScoreEventDTO(
+            id="valid-score",
+            sport_key="soccer_epl",
+            commence_time=datetime(2026, 5, 25, tzinfo=timezone.utc),
+            completed=True,
+            home_team="Team X",
+            away_team="Opponent",
+            scores=[
+                ScoreEntryDTO(name="Team X", score="2"),
+                ScoreEntryDTO(name="Opponent", score="1"),
+            ],
+        ),
+    ]
+
+    form = team_form_from_score_events(team, events)
+
+    assert form.matches_played == 1
+    assert form.wins == 1
+    assert form.goals_for == 2
+    assert form.goals_against == 1
+
+
+def test_team_form_from_score_events_skips_events_missing_the_teams_own_score_entry() -> None:
+    team = Team(id="team-x", name="Team X")
+    events = [
+        ScoreEventDTO(
+            id="null-score-for-team",
+            sport_key="soccer_epl",
+            commence_time=datetime(2026, 6, 1, tzinfo=timezone.utc),
+            completed=True,
+            home_team="Team X",
+            away_team="Opponent",
+            scores=[
+                ScoreEntryDTO(name="Team X", score=None),
+                ScoreEntryDTO(name="Opponent", score="0"),
+            ],
+        )
+    ]
+
+    form = team_form_from_score_events(team, events)
+
+    assert form.matches_played == 0
