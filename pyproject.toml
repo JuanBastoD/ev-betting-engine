@@ -4,7 +4,11 @@ version = "0.1.0"
 description = "Motor de detección de apuestas +EV en fútbol pre-partido"
 requires-python = ">=3.12"
 dependencies = [
+    "aiosqlite>=0.22.1",
+    "alembic>=1.18.5",
+    "asyncpg>=0.31.0",
     "pydantic-settings>=2.14.2",
+    "sqlalchemy[asyncio]>=2.0",
 ]
 
 [dependency-groups]
