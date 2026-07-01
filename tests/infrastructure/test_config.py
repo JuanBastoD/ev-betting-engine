@@ -6,7 +6,14 @@ from src.infrastructure.config import Settings
 
 @pytest.fixture(autouse=True)
 def _isolate_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    for key in ("DATABASE_URL", "ODDS_API_KEY", "KELLY_FRACTION", "MIN_EV_THRESHOLD", "SHARP_BOOKMAKER"):
+    for key in (
+        "DATABASE_URL",
+        "ODDS_API_KEY",
+        "ODDS_API_BASE_URL",
+        "KELLY_FRACTION",
+        "MIN_EV_THRESHOLD",
+        "SHARP_BOOKMAKER",
+    ):
         monkeypatch.delenv(key, raising=False)
 
 
@@ -30,6 +37,7 @@ def test_settings_applies_defaults_for_optional_values(
 
     settings = Settings()
 
+    assert settings.odds_api_base_url == "https://api.the-odds-api.com/v4"
     assert settings.kelly_fraction == 0.5
     assert settings.min_ev_threshold == 0.02
     assert settings.sharp_bookmaker == "Pinnacle"
@@ -39,12 +47,14 @@ def test_settings_reads_overridden_values_from_env(monkeypatch: pytest.MonkeyPat
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/ev_betting")
     monkeypatch.setenv("ODDS_API_KEY", "secret-key")
+    monkeypatch.setenv("ODDS_API_BASE_URL", "https://mock.odds.local/v4")
     monkeypatch.setenv("KELLY_FRACTION", "0.25")
     monkeypatch.setenv("MIN_EV_THRESHOLD", "0.05")
     monkeypatch.setenv("SHARP_BOOKMAKER", "Betfair Exchange")
 
     settings = Settings()
 
+    assert settings.odds_api_base_url == "https://mock.odds.local/v4"
     assert settings.kelly_fraction == 0.25
     assert settings.min_ev_threshold == 0.05
     assert settings.sharp_bookmaker == "Betfair Exchange"
