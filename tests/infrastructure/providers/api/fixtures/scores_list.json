@@ -1,0 +1,74 @@
+[
+  {
+    "id": "score-1",
+    "sport_key": "soccer_epl",
+    "commence_time": "2026-06-20T14:00:00Z",
+    "completed": true,
+    "home_team": "Manchester United",
+    "away_team": "Everton",
+    "scores": [
+      {"name": "Manchester United", "score": "3"},
+      {"name": "Everton", "score": "1"}
+    ],
+    "last_update": "2026-06-20T16:00:00Z"
+  },
+  {
+    "id": "score-2",
+    "sport_key": "soccer_epl",
+    "commence_time": "2026-06-13T14:00:00Z",
+    "completed": true,
+    "home_team": "Fulham",
+    "away_team": "Manchester United",
+    "scores": [
+      {"name": "Fulham", "score": "1"},
+      {"name": "Manchester United", "score": "1"}
+    ],
+    "last_update": "2026-06-13T16:00:00Z"
+  },
+  {
+    "id": "score-3",
+    "sport_key": "soccer_epl",
+    "commence_time": "2026-06-06T14:00:00Z",
+    "completed": true,
+    "home_team": "Manchester United",
+    "away_team": "Aston Villa",
+    "scores": [
+      {"name": "Manchester United", "score": "0"},
+      {"name": "Aston Villa", "score": "2"}
+    ],
+    "last_update": "2026-06-06T16:00:00Z"
+  },
+  {
+    "id": "score-4",
+    "sport_key": "soccer_epl",
+    "commence_time": "2026-05-30T14:00:00Z",
+    "completed": true,
+    "home_team": "Brighton",
+    "away_team": "Manchester United",
+    "scores": [
+      {"name": "Brighton", "score": "0"},
+      {"name": "Manchester United", "score": "2"}
+    ],
+    "last_update": "2026-05-30T16:00:00Z"
+  },
+  {
+    "id": "score-5",
+    "sport_key": "soccer_epl",
+    "commence_time": "2026-05-23T14:00:00Z",
+    "completed": false,
+    "home_team": "Manchester United",
+    "away_team": "Newcastle",
+    "scores": null,
+    "last_update": "2026-05-23T14:00:00Z"
+  },
+  {
+    "id": "score-6",
+    "sport_key": "soccer_epl",
+    "commence_time": "2026-05-16T14:00:00Z",
+    "completed": true,
+    "home_team": "Wolves",
+    "away_team": "Manchester United",
+    "scores": null,
+    "last_update": "2026-05-16T14:00:00Z"
+  }
+]

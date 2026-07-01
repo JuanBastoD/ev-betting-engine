@@ -1,0 +1,70 @@
+[
+  {
+    "id": "e912304de1234567890abcdef123456",
+    "sport_key": "soccer_epl",
+    "sport_title": "EPL",
+    "commence_time": "2026-08-15T20:00:00Z",
+    "home_team": "Manchester United",
+    "away_team": "Liverpool",
+    "bookmakers": [
+      {
+        "key": "pinnacle",
+        "title": "Pinnacle",
+        "last_update": "2026-08-15T18:00:00Z",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-08-15T18:00:00Z",
+            "outcomes": [
+              {"name": "Manchester United", "price": 2.10},
+              {"name": "Liverpool", "price": 3.40},
+              {"name": "Draw", "price": 3.25}
+            ]
+          }
+        ]
+      },
+      {
+        "key": "bet365",
+        "title": "Bet365",
+        "last_update": "2026-08-15T18:05:00Z",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-08-15T18:05:00Z",
+            "outcomes": [
+              {"name": "Manchester United", "price": 2.05},
+              {"name": "Liverpool", "price": 3.30},
+              {"name": "Draw", "price": 3.20}
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "f823415ef2345678901bcdef2345678",
+    "sport_key": "soccer_epl",
+    "sport_title": "EPL",
+    "commence_time": "2026-08-16T15:00:00Z",
+    "home_team": "Chelsea",
+    "away_team": "Arsenal",
+    "bookmakers": [
+      {
+        "key": "pinnacle",
+        "title": "Pinnacle",
+        "last_update": "2026-08-16T14:00:00Z",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-08-16T14:00:00Z",
+            "outcomes": [
+              {"name": "Chelsea", "price": 2.60},
+              {"name": "Arsenal", "price": 2.70},
+              {"name": "Draw", "price": 3.30}
+            ]
+          }
+        ]
+      }
+    ]
+  }
+]
