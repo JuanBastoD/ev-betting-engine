@@ -19,3 +19,7 @@ htmlcov/
 
 # Local tool config
 .claude/
+
+# Local SQLite databases
+*.db
+*.db-journal
