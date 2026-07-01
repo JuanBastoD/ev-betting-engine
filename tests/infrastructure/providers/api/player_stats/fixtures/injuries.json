@@ -1,0 +1,34 @@
+{
+  "data": [
+    {
+      "player_id": "1101",
+      "player_name": "Kevin De Bruyne",
+      "team_id": "50",
+      "team_name": "Manchester City",
+      "position": "Midfielder",
+      "status": "Doubtful",
+      "source": "Sportmonks",
+      "updated_at": "2026-08-14T09:30:00Z"
+    },
+    {
+      "player_id": "1102",
+      "player_name": "John Stones",
+      "team_id": "50",
+      "team_name": "Manchester City",
+      "position": "Defender",
+      "status": "Injured",
+      "source": "Sportmonks",
+      "updated_at": "2026-08-14T09:00:00Z"
+    },
+    {
+      "player_id": "1103",
+      "player_name": "Some Player",
+      "team_id": "50",
+      "team_name": "Manchester City",
+      "position": "Midfielder",
+      "status": "Personal Reasons",
+      "source": "Sportmonks",
+      "updated_at": "2026-08-14T08:00:00Z"
+    }
+  ]
+}

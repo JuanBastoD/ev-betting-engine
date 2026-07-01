@@ -1,0 +1,88 @@
+{
+  "data": [
+    {
+      "fixture": {
+        "id": "fx-2001",
+        "starting_at": "2026-06-20T14:00:00Z",
+        "league_id": "soccer_epl",
+        "league_name": "EPL",
+        "home_team_id": "50",
+        "home_team_name": "Manchester City",
+        "away_team_id": "40",
+        "away_team_name": "Everton"
+      },
+      "player": {
+        "id": "1100",
+        "name": "Erling Haaland",
+        "team_id": "50",
+        "team_name": "Manchester City",
+        "position": "Forward"
+      },
+      "minutes_played": 90,
+      "started": true,
+      "shots_total": 5,
+      "shots_on_target": 3,
+      "goals": 2,
+      "assists": 0,
+      "yellow_cards": 0,
+      "red_cards": 0,
+      "corners_won": 1
+    },
+    {
+      "fixture": {
+        "id": "fx-2002",
+        "starting_at": "2026-06-13T14:00:00Z",
+        "league_id": "soccer_epl",
+        "league_name": "EPL",
+        "home_team_id": "45",
+        "home_team_name": "Fulham",
+        "away_team_id": "50",
+        "away_team_name": "Manchester City"
+      },
+      "player": {
+        "id": "1100",
+        "name": "Erling Haaland",
+        "team_id": "50",
+        "team_name": "Manchester City",
+        "position": "Forward"
+      },
+      "minutes_played": 65,
+      "started": true,
+      "shots_total": 2,
+      "shots_on_target": 1,
+      "goals": 1,
+      "assists": 1,
+      "yellow_cards": 1,
+      "red_cards": 0,
+      "corners_won": 0
+    },
+    {
+      "fixture": {
+        "id": "fx-2003",
+        "starting_at": "2026-06-06T14:00:00Z",
+        "league_id": "soccer_epl",
+        "league_name": "EPL",
+        "home_team_id": "50",
+        "home_team_name": "Manchester City",
+        "away_team_id": "38",
+        "away_team_name": "Aston Villa"
+      },
+      "player": {
+        "id": "1100",
+        "name": "Erling Haaland",
+        "team_id": "50",
+        "team_name": "Manchester City",
+        "position": "Forward"
+      },
+      "minutes_played": 15,
+      "started": false,
+      "shots_total": 1,
+      "shots_on_target": 0,
+      "goals": 0,
+      "assists": 0,
+      "yellow_cards": 0,
+      "red_cards": 0,
+      "corners_won": null
+    }
+  ]
+}

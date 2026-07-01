@@ -1,0 +1,25 @@
+{
+  "data": {
+    "fixture": {
+      "id": "fx-3001",
+      "starting_at": "2026-08-15T20:00:00Z",
+      "league_id": "soccer_epl",
+      "league_name": "EPL",
+      "home_team_id": "50",
+      "home_team_name": "Manchester City",
+      "away_team_id": "40",
+      "away_team_name": "Everton"
+    },
+    "is_confirmed": false,
+    "entries": [
+      {
+        "player_id": "1100",
+        "player_name": "Erling Haaland",
+        "team_id": "50",
+        "team_name": "Manchester City",
+        "position": "Forward",
+        "is_starting": true
+      }
+    ]
+  }
+}
