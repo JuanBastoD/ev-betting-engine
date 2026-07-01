@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.domain.entities.bookmaker import Bookmaker
@@ -10,6 +11,7 @@ from src.domain.entities.odds_quote import OddsQuote
 from src.domain.entities.selection import Selection
 from src.domain.entities.team import Team
 from src.domain.value_objects.decimal_odds import DecimalOdds
+from src.infrastructure.persistence.models import BookmakerModel
 from src.infrastructure.persistence.repositories.match_repository import SqlAlchemyMatchRepository
 from src.infrastructure.persistence.repositories.odds_repository import SqlAlchemyOddsRepository
 
@@ -107,3 +109,40 @@ async def test_list_by_match_id_orders_by_quoted_at_and_excludes_other_matches(
     quotes = await odds_repository.list_by_match_id(match_a.id)
 
     assert [quote.bookmaker.name for quote in quotes] == ["Pinnacle", "Bet365"]
+
+
+async def test_save_upserts_the_bookmaker_by_name_instead_of_duplicating_it(
+    session: AsyncSession, match: Match, selection: Selection
+) -> None:
+    await SqlAlchemyMatchRepository(session).save(match)
+    repository = SqlAlchemyOddsRepository(session)
+
+    first_quote = OddsQuote(
+        bookmaker=Bookmaker(name="Pinnacle", is_sharp=True, region="EU"),
+        selection=selection,
+        odds=DecimalOdds(1.90),
+        quoted_at=datetime(2026, 8, 15, 10, 0, tzinfo=timezone.utc),
+    )
+    second_quote = OddsQuote(
+        bookmaker=Bookmaker(name="Pinnacle", is_sharp=False, region="US"),
+        selection=selection,
+        odds=DecimalOdds(1.92),
+        quoted_at=datetime(2026, 8, 15, 11, 0, tzinfo=timezone.utc),
+    )
+
+    await repository.save(first_quote, match_id=match.id)
+    await repository.save(second_quote, match_id=match.id)
+
+    bookmaker_count = (
+        await session.execute(
+            select(func.count()).select_from(BookmakerModel).where(BookmakerModel.name == "Pinnacle")
+        )
+    ).scalar_one()
+    assert bookmaker_count == 1
+
+    quotes = await repository.list_by_match_id(match.id)
+    assert len(quotes) == 2
+    # bookmakers is reference data (get-or-create by name), not a per-quote
+    # snapshot: both quotes now see the latest upserted region/is_sharp.
+    assert all(quote.bookmaker.region == "US" for quote in quotes)
+    assert all(quote.bookmaker.is_sharp is False for quote in quotes)
