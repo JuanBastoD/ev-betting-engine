@@ -39,6 +39,7 @@ async def test_get_session_yields_a_working_session_configured_from_settings(
 ) -> None:
     monkeypatch.setenv("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
     monkeypatch.setenv("ODDS_API_KEY", "test-key")
+    monkeypatch.setenv("SPORTMONKS_API_TOKEN", "test-token")
 
     async for session in get_session():
         assert isinstance(session, AsyncSession)
@@ -49,6 +50,7 @@ async def test_get_session_yields_a_working_session_configured_from_settings(
 async def test_get_session_factory_reuses_the_same_engine(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
     monkeypatch.setenv("ODDS_API_KEY", "test-key")
+    monkeypatch.setenv("SPORTMONKS_API_TOKEN", "test-token")
 
     first = get_session_factory()
     second = get_session_factory()

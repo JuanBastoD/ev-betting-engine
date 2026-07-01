@@ -271,6 +271,7 @@ async def test_from_settings_wires_base_url_and_api_key_from_config(
     monkeypatch.setenv("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
     monkeypatch.setenv("ODDS_API_KEY", "secret-from-settings")
     monkeypatch.setenv("ODDS_API_BASE_URL", "https://mock.local/v4")
+    monkeypatch.setenv("SPORTMONKS_API_TOKEN", "unused-in-this-test")
 
     with respx.mock(assert_all_called=True) as router:
         route = router.get("https://mock.local/v4/sports/soccer_epl/odds").mock(
