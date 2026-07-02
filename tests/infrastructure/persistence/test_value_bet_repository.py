@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.domain.entities.league import League
 from src.domain.entities.match import Match
+from src.domain.entities.model_source import ModelSource
 from src.domain.entities.selection import Selection
 from src.domain.entities.team import Team
 from src.domain.entities.value_bet import ValueBet
@@ -25,6 +26,7 @@ def _value_bet(match: Match, selection: Selection, edge: float = 10.0) -> ValueB
         fair_probability=Probability(0.5),
         edge=EdgePercentage(edge),
         suggested_stake=Stake(25.0),
+        model_source=ModelSource.MARKET,
     )
 
 

@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 from src.domain.entities.match import Match
+from src.domain.entities.model_source import ModelSource
 from src.domain.entities.selection import Selection
 from src.domain.value_objects.decimal_odds import DecimalOdds
 from src.domain.value_objects.edge_percentage import EdgePercentage
@@ -18,6 +19,7 @@ class ValueBet:
     fair_probability: Probability
     edge: EdgePercentage
     suggested_stake: Stake
+    model_source: ModelSource
 
     def __post_init__(self) -> None:
         if self.edge.value <= 0.0:

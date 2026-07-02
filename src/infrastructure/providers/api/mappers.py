@@ -66,6 +66,7 @@ def odds_quotes_from_event_odds_dto(
     Non-h2h markets (e.g. totals/BTTS) are out of scope for this phase and
     are skipped, not mapped.
     """
+    match = match_from_event_odds_dto(dto)
     quotes: list[OddsQuote] = []
     for bookmaker_dto in dto.bookmakers:
         if bookmaker_dto.key != sharp_bookmaker_key:
@@ -84,6 +85,7 @@ def odds_quotes_from_event_odds_dto(
                 )
                 quotes.append(
                     OddsQuote(
+                        match=match,
                         bookmaker=bookmaker,
                         selection=selection,
                         odds=DecimalOdds(outcome.price),

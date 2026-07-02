@@ -6,6 +6,7 @@ from src.domain.entities.bookmaker import Bookmaker
 from src.domain.entities.league import League
 from src.domain.entities.market_type import MarketType
 from src.domain.entities.match import Match
+from src.domain.entities.model_source import ModelSource
 from src.domain.entities.odds_quote import OddsQuote
 from src.domain.entities.player import Player
 from src.domain.entities.player_match_stats import PlayerMatchStats
@@ -80,9 +81,17 @@ def test_match_round_trip(match: Match, home_team: Team, away_team: Team, league
     ],
 )
 def test_odds_quote_round_trip(
-    bookmaker: Bookmaker, market_type: MarketType, outcome: str, line: float | None
+    match: Match,
+    home_team: Team,
+    away_team: Team,
+    league: League,
+    bookmaker: Bookmaker,
+    market_type: MarketType,
+    outcome: str,
+    line: float | None,
 ) -> None:
     odds_quote = OddsQuote(
+        match=match,
         bookmaker=bookmaker,
         selection=Selection(market_type=market_type, outcome=outcome, line=line),
         odds=DecimalOdds(1.95),
@@ -90,7 +99,13 @@ def test_odds_quote_round_trip(
     )
 
     model = odds_quote_to_model(odds_quote, bookmaker_id=1)
+    assert model.match_id == match.id
     model.bookmaker = bookmaker_to_model(bookmaker)
+    match_model = match_to_model(match)
+    match_model.home_team = team_to_model(home_team)
+    match_model.away_team = team_to_model(away_team)
+    match_model.league = league_to_model(league)
+    model.match = match_model
 
     restored = odds_quote_from_model(model)
 
@@ -126,9 +141,11 @@ def test_value_bet_round_trip(
         fair_probability=Probability(0.5),
         edge=EdgePercentage(10.0),
         suggested_stake=Stake(25.0),
+        model_source=ModelSource.MARKET,
     )
 
     model = value_bet_to_model(value_bet)
+    assert model.model_source == "MARKET"
     match_model = match_to_model(match)
     match_model.home_team = team_to_model(home_team)
     match_model.away_team = team_to_model(away_team)

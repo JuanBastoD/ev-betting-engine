@@ -75,6 +75,9 @@ def test_odds_quotes_from_event_odds_dto_maps_only_the_sharp_bookmaker(
     assert all(quote.bookmaker.name == "Pinnacle" for quote in quotes)
     assert all(quote.bookmaker.is_sharp is True for quote in quotes)
     assert all(quote.selection.market_type is MarketType.MATCH_WINNER_1X2 for quote in quotes)
+    # Every quote is self-contained: it carries the full Match from the DTO.
+    assert all(quote.match.id == dto.id for quote in quotes)
+    assert all(quote.match.home_team.name == dto.home_team for quote in quotes)
 
     by_outcome = {quote.selection.outcome: quote.odds.value for quote in quotes}
     assert by_outcome == {"Home": 2.10, "Away": 3.40, "Draw": 3.25}

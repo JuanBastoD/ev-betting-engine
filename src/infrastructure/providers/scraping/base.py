@@ -130,6 +130,7 @@ class AbstractBookmakerScraper(ABC):
     def _quote(
         self,
         *,
+        match: Match,
         market_type: MarketType,
         outcome: str,
         odds_text: str,
@@ -137,6 +138,7 @@ class AbstractBookmakerScraper(ABC):
         line: float | None = None,
     ) -> OddsQuote:
         return OddsQuote(
+            match=match,
             bookmaker=self._bookmaker,
             selection=Selection(market_type=market_type, outcome=outcome, line=line),
             odds=parse_decimal_odds(odds_text),

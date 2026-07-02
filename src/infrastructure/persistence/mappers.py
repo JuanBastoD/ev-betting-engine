@@ -9,6 +9,7 @@ from src.domain.entities.bookmaker import Bookmaker
 from src.domain.entities.league import League
 from src.domain.entities.market_type import MarketType
 from src.domain.entities.match import Match
+from src.domain.entities.model_source import ModelSource
 from src.domain.entities.odds_quote import OddsQuote
 from src.domain.entities.player import Player
 from src.domain.entities.player_match_stats import PlayerMatchStats
@@ -90,11 +91,9 @@ def _selection_from_columns(market_type: str, outcome: str, line: float | None) 
     return Selection(market_type=MarketType(market_type), outcome=outcome, line=line)
 
 
-def odds_quote_to_model(
-    odds_quote: OddsQuote, *, bookmaker_id: int, match_id: str | None = None
-) -> OddsQuoteModel:
+def odds_quote_to_model(odds_quote: OddsQuote, *, bookmaker_id: int) -> OddsQuoteModel:
     return OddsQuoteModel(
-        match_id=match_id,
+        match_id=odds_quote.match.id,
         bookmaker_id=bookmaker_id,
         odds_value=odds_quote.odds.value,
         quoted_at=odds_quote.quoted_at,
@@ -104,6 +103,7 @@ def odds_quote_to_model(
 
 def odds_quote_from_model(model: OddsQuoteModel) -> OddsQuote:
     return OddsQuote(
+        match=match_from_model(model.match),
         bookmaker=bookmaker_from_model(model.bookmaker),
         selection=_selection_from_columns(model.market_type, model.outcome, model.line),
         odds=DecimalOdds(model.odds_value),
@@ -142,6 +142,7 @@ def value_bet_to_model(value_bet: ValueBet) -> ValueBetModel:
         fair_probability=value_bet.fair_probability.value,
         edge_percentage=value_bet.edge.value,
         suggested_stake=value_bet.suggested_stake.amount,
+        model_source=value_bet.model_source.value,
         **_selection_to_columns(value_bet.selection),
     )
 
@@ -154,6 +155,7 @@ def value_bet_from_model(model: ValueBetModel) -> ValueBet:
         fair_probability=Probability(model.fair_probability),
         edge=EdgePercentage(model.edge_percentage),
         suggested_stake=Stake(model.suggested_stake),
+        model_source=ModelSource(model.model_source),
     )
 
 

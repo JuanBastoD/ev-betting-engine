@@ -154,6 +154,7 @@ def test_parse_match_odds_marks_quotes_as_local_colombian(
     quotes = make_scraper(spec).parse_match_odds(load_fixture(spec.match_fixture), match)
 
     for quote in quotes:
+        assert quote.match is match
         assert quote.bookmaker.name == spec.scraper_cls.bookmaker_name
         assert quote.bookmaker.is_sharp is False
         assert quote.bookmaker.region == "CO"

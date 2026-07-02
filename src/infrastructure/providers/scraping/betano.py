@@ -64,6 +64,7 @@ class BetanoScraper(AbstractBookmakerScraper):
         for outcome, selection in zip(_1X2_OUTCOMES, selections):
             quotes.append(
                 self._quote(
+                    match=match,
                     market_type=MarketType.MATCH_WINNER_1X2,
                     outcome=outcome,
                     odds_text=self._required_text(selection, "selection-price"),
@@ -83,6 +84,7 @@ class BetanoScraper(AbstractBookmakerScraper):
                 outcome, line = parsed
                 quotes.append(
                     self._quote(
+                        match=match,
                         market_type=MarketType.OVER_UNDER,
                         outcome=outcome,
                         line=line,
@@ -100,6 +102,7 @@ class BetanoScraper(AbstractBookmakerScraper):
                     continue
                 quotes.append(
                     self._quote(
+                        match=match,
                         market_type=MarketType.BTTS,
                         outcome=outcome_name,
                         odds_text=self._required_text(selection, "selection-price"),

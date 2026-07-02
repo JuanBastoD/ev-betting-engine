@@ -63,6 +63,7 @@ class StakeScraper(AbstractBookmakerScraper):
         for outcome, row in zip(_1X2_OUTCOMES, rows):
             quotes.append(
                 self._quote(
+                    match=match,
                     market_type=MarketType.MATCH_WINNER_1X2,
                     outcome=outcome,
                     odds_text=self._required_text(row, "outcome-odds"),
@@ -82,6 +83,7 @@ class StakeScraper(AbstractBookmakerScraper):
                 outcome, line = parsed
                 quotes.append(
                     self._quote(
+                        match=match,
                         market_type=MarketType.OVER_UNDER,
                         outcome=outcome,
                         line=line,
@@ -99,6 +101,7 @@ class StakeScraper(AbstractBookmakerScraper):
                     continue
                 quotes.append(
                     self._quote(
+                        match=match,
                         market_type=MarketType.BTTS,
                         outcome=outcome_name,
                         odds_text=self._required_text(row, "outcome-odds"),

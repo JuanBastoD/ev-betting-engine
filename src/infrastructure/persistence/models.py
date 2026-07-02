@@ -89,12 +89,7 @@ class OddsQuoteModel(Base):
     __tablename__ = "odds_quotes"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    # Nullable: the domain OddsQuote entity carries no match reference, so a
-    # quote can be persisted stand-alone via the OddsRepository port's plain
-    # `save(odds_quote)` signature. See repositories/odds_repository.py.
-    match_id: Mapped[str | None] = mapped_column(
-        ForeignKey("matches.id"), nullable=True, index=True
-    )
+    match_id: Mapped[str] = mapped_column(ForeignKey("matches.id"), nullable=False, index=True)
     bookmaker_id: Mapped[int] = mapped_column(
         ForeignKey("bookmakers.id"), nullable=False, index=True
     )
@@ -105,7 +100,7 @@ class OddsQuoteModel(Base):
     odds_value: Mapped[float] = mapped_column(Float, nullable=False)
     quoted_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False, index=True)
 
-    match: Mapped[MatchModel | None] = relationship(lazy="selectin")
+    match: Mapped[MatchModel] = relationship(lazy="selectin")
     bookmaker: Mapped[BookmakerModel] = relationship(lazy="selectin")
 
 
@@ -137,6 +132,8 @@ class ValueBetModel(Base):
     fair_probability: Mapped[float] = mapped_column(Float, nullable=False)
     edge_percentage: Mapped[float] = mapped_column(Float, nullable=False)
     suggested_stake: Mapped[float] = mapped_column(Float, nullable=False)
+    # ModelSource (domain enum) stored as its string value.
+    model_source: Mapped[str] = mapped_column(String(32), nullable=False)
 
     match: Mapped[MatchModel] = relationship(lazy="selectin")
 

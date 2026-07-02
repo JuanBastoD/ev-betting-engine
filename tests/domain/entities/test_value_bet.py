@@ -5,6 +5,7 @@ import pytest
 from src.domain.entities.league import League
 from src.domain.entities.market_type import MarketType
 from src.domain.entities.match import Match
+from src.domain.entities.model_source import ModelSource
 from src.domain.entities.selection import Selection
 from src.domain.entities.team import Team
 from src.domain.entities.value_bet import ValueBet
@@ -38,10 +39,12 @@ def test_valid_value_bet_construction(match: Match, selection: Selection) -> Non
         fair_probability=Probability(0.5),
         edge=EdgePercentage(10.0),
         suggested_stake=Stake(25.0),
+        model_source=ModelSource.MARKET,
     )
     assert value_bet.match is match
     assert value_bet.selection is selection
     assert value_bet.edge.value == 10.0
+    assert value_bet.model_source is ModelSource.MARKET
 
 
 @pytest.mark.parametrize("edge_value", [0.0, -5.0])
@@ -56,4 +59,5 @@ def test_value_bet_requires_positive_edge(
             fair_probability=Probability(0.5),
             edge=EdgePercentage(edge_value),
             suggested_stake=Stake(25.0),
+            model_source=ModelSource.MARKET,
         )
