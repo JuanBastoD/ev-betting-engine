@@ -12,7 +12,8 @@ Construido con **Clean Architecture** y **Domain-Driven Design**, capa por capa,
 | 2 | Persistencia: SQLAlchemy 2.0 async, repositorios, migraciones Alembic | ✅ |
 | 3 | Ingesta de cuotas sharp y forma de equipo (The Odds API) | ✅ |
 | 4 | Ingesta de datos de jugador: stats, lesiones, alineaciones (Sportmonks) | ✅ |
-| 5+ | Casos de uso de aplicación, cálculo de EV, capa de presentación | ⏳ pendiente |
+| 5 | Scraping de casas locales con Playwright: mercados de partido y props de jugador | ✅ |
+| 6+ | Casos de uso de aplicación, cálculo de EV, capa de presentación | ⏳ pendiente |
 
 `src/application/` y `src/presentation/` existen como esqueleto pero aún no tienen lógica: todavía no hay cálculo de probabilidad justa, de edge, ni una API/CLI expuesta.
 
@@ -28,6 +29,7 @@ presentation  →  application  →  domain  ←  infrastructure
 - **`src/infrastructure/`**
   - `persistence/` — modelos ORM, mappers Entity↔Model, repositorios concretos (patrón Repository + Data Mapper), migraciones Alembic (async).
   - `providers/api/` — adaptadores para APIs externas (patrón Adapter + DTO Pydantic + Mapper), con reintentos y manejo de errores propios de dominio (`ProviderUnavailableError`, `RateLimitError`).
+  - `providers/scraping/` — scrapers Playwright para casas locales (patrones Page Object Model + Factory + Template Method): una clase base abstracta con el flujo común (navegación con reintentos, esperas por selector, delays) y una subclase por casa (`BetplayScraper`, `StakeScraper`, `BetanoScraper`) donde viven aislados los selectores de cada sitio. Extrae mercados principales (1X2, Over/Under, BTTS) y props de jugador (goles, tiros a puerta, asistencias, tarjetas).
 - **`src/application/`** — casos de uso (aún no implementados).
 - **`src/presentation/`** — API/CLI (aún no implementada).
 
@@ -39,12 +41,18 @@ Ver [CLAUDE.md](CLAUDE.md) para el detalle de convenciones internas, decisiones 
 |---|---|---|
 | [The Odds API](https://the-odds-api.com) | Cuotas 1X2 de Pinnacle (sharp), resultados recientes para forma de equipo | query param `apiKey` |
 | [Sportmonks](https://www.sportmonks.com) | Estadísticas de jugador por partido, reportes de lesión, alineaciones confirmadas/estimadas | query param `api_token` |
+| Betplay / Stake / Betano (scraping) | Cuotas locales colombianas: mercados de partido y props de jugador | n/a (Playwright headless) |
+
+### Nota legal sobre el scraping
+
+El scraping de casas de apuestas debe **respetar los Términos de Servicio de cada sitio** y la normativa de **Coljuegos** (regulador colombiano de juegos de suerte y azar). Este módulo está pensado para uso personal y de bajo volumen: el delay entre requests, los timeouts y los límites de reintentos son **parámetros configurables** de cada scraper (`request_delay_seconds`, `nav_timeout_ms`, `max_attempts`, ...) — configúralos de forma conservadora para no elevar la carga sobre los sitios. Verifica los ToS vigentes de cada operador antes de ejecutarlo.
 
 ## Stack técnico
 
 - **Python 3.12+**, gestor de paquetes [uv](https://docs.astral.sh/uv/)
 - **SQLAlchemy 2.0** (async) + **Alembic** (migraciones async) — SQLite/aiosqlite en desarrollo, Postgres/asyncpg en producción (solo cambia `DATABASE_URL`)
 - **httpx** (cliente HTTP async) + **tenacity** (reintentos con backoff exponencial)
+- **Playwright** (async, Chromium headless) para scraping de casas locales — los tests nunca abren un navegador real
 - **Pydantic** / **pydantic-settings** (DTOs y configuración)
 - **pytest** + **pytest-asyncio** + **pytest-cov** + **respx** (mocking HTTP, sin red real en tests)
 
@@ -55,6 +63,9 @@ uv sync
 cp .env.example .env
 # editar .env con tus credenciales: DATABASE_URL, ODDS_API_KEY, SPORTMONKS_API_TOKEN
 uv run alembic upgrade head
+
+# Solo si vas a ejecutar el scraping real (los tests no lo necesitan):
+uv run playwright install chromium
 ```
 
 ## Ejecutar pruebas

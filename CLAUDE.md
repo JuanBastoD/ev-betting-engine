@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 `ev-betting-engine`: a pre-match +EV (positive expected value) detection engine for football betting. It ingests "sharp" reference odds (Pinnacle via The Odds API) and team/player statistics (Sportmonks), and will eventually compare local bookmaker odds against a fair-probability model to surface positive-EV bets. Built strictly as Clean Architecture / DDD, one numbered "Prompt" (phase) at a time, each phase fully tested and committed before the next begins.
 
-**Current state**: domain model, persistence layer, and both external data-ingestion adapters are done. `src/application/` and `src/presentation/` are still empty stubs - no use cases, no fair-probability/EV calculation, no API or CLI yet.
+**Current state**: domain model, persistence layer, both API data-ingestion adapters, and the local-bookmaker scraping adapter (Playwright) are done. `src/application/` and `src/presentation/` are still empty stubs - no use cases, no fair-probability/EV calculation, no API or CLI yet.
 
 ## Commands
 
@@ -44,7 +44,8 @@ Four layers under `src/`, dependencies point strictly inward: `presentation -> a
 
 - `entities/`: frozen, slotted dataclasses (`@dataclass(frozen=True, slots=True)`), validated in `__post_init__`, raising `ValueError`. Entity identity is by id where one naturally exists (`Match.id`, `Team.id`); some entities nest full related entities rather than bare ids (e.g. `PlayerMatchStats.match: Match`, not `match_id: str`) so a provider adapter can build one from a single API response without a second lookup.
 - `value_objects/`: same frozen/slotted/validated pattern for primitives (`DecimalOdds` > 1.0, `Probability` in [0,1], `EdgePercentage` >= -100, `Stake` > 0).
-- `ports/`: ABCs only, no implementation. Two flavors: repositories (`MatchRepository`, `OddsRepository`, `ValueBetRepository`, `PlayerRepository`, `PlayerStatsRepository`) and external-data providers (`SharpOddsProvider`, `LocalOddsProvider` (unimplemented), `StatsProvider`, `PlayerStatsProvider`).
+- `ports/`: ABCs only, no implementation. Two flavors: repositories (`MatchRepository`, `OddsRepository`, `ValueBetRepository`, `PlayerRepository`, `PlayerStatsRepository`) and external-data providers (`SharpOddsProvider`, `LocalOddsProvider`, `StatsProvider`, `PlayerStatsProvider`). `LocalOddsProvider` covers both the main match markets (`get_odds`) and player props (`get_player_props`).
+- `PlayerPropMarket` deliberately carries a full `match: Match` reference (the lesson from the `OddsQuote` gap below) but a `player_name: str` instead of a `Player` entity: bookmakers expose only a display label, and resolving it to a known `Player` is application-layer matching, not ingestion. There is no repository port / ORM model / migration for `PlayerPropMarket` yet - persisting props needs its own decision when a use case wants to store them.
 
 Known intentional gap: `OddsQuote` carries no match reference (only bookmaker/selection/odds/timestamp) - this was flagged rather than fixed, since fixing it means changing the domain and that wasn't in scope when discovered. `SqlAlchemyOddsRepository.save()` works around it with an optional `match_id` kwarg beyond what `OddsRepository.save()` declares. Don't "fix" this quietly; it needs an explicit decision (add a match reference to `OddsQuote`/`Selection`) if it ever gets addressed.
 
@@ -76,9 +77,21 @@ Every provider adapter carries enough context in its own DTOs to build a full `M
 
 `httpx.AsyncClient(base_url=...)` + a request path starting with `/` silently drops any path segment in `base_url` (e.g. the `/v4` in `https://api.the-odds-api.com/v4`), per RFC 3986 URL-join rules. Both clients normalize `base_url` to end with `/` and build request paths *without* a leading `/` to avoid this - keep that convention if you touch either client.
 
+### Infrastructure - scraping (`src/infrastructure/providers/scraping/`)
+
+Playwright-based adapter for local Colombian bookmakers (Betplay, Stake, Betano), implementing `LocalOddsProvider`. Patterns: Page Object Model + Factory + Template Method.
+
+- `base.py`: `AbstractBookmakerScraper` owns the whole shared flow (rate-limit delay -> `goto` + `wait_for_selector` with tenacity retries -> `inner_html` -> parse). Playwright touches exactly three page operations (`goto`, `wait_for_selector`, `inner_html`/`click`) so tests fake the Page trivially. Retry/backoff/delay/timeouts are constructor args (same reasoning as the API clients). 1X2 parsing is position-based (first=Home, second=Draw, third=Away), not name-based - sites abbreviate team names unpredictably.
+- One module per bookmaker (`betplay.py`, `stake.py`, `betano.py`): all of a site's CSS selectors, label vocabulary (Spanish/English, over/under prefixes, prop-type names) and URL scheme live in its class only. Each registers itself with `@ScraperFactory.register`; `scraping/__init__.py` imports all scrapers so importing the package wires the registry - a new bookmaker is one new subclass + one import line, no orchestrator changes.
+- **Parsing is 100% pure**: scrapers grab container `inner_html` and hand the string to `parse_match_odds`/`parse_player_props`, which run on `html_utils.py` - a tiny stdlib-only (html.parser) fragment parser written to avoid adding beautifulsoup/selectolax as a dependency. This is what lets the whole parse layer be tested against local `.html` fixtures with `page=None`.
+- Unrecognized market/prop labels are *skipped*, not errors (sites offer far more markets than the domain models); missing structural blocks raise `SelectorNotFoundError`, malformed odds text raises `OddsParsingError`. All scraping exceptions extend `ScrapingError`, which extends the shared `ProviderError` - no Playwright exception may leak past this package.
+- `browser.py`: `PlaywrightBrowserSession` is the only place that launches Chromium (headless, realistic user-agent/viewport); its `close()` releases context/browser/driver even if a step fails. `provider.py`: `PlaywrightLocalOddsProvider` is scoped to one bookmaker per instance (mirroring the sharp provider's one-sport_key scoping), opens a fresh Page per call and always closes it.
+- Real scraping needs `uv run playwright install chromium` once; **tests never launch a browser** and don't need it. README carries the ToS/Coljuegos legal note - keep delays conservative and configurable.
+
 ### Testing conventions
 
 - HTTP is always mocked with `respx` (`with respx.mock(assert_all_called=True) as router: ...`), never real network - respx's default `assert_all_mocked=True` makes an accidental real call fail loudly.
 - Persistence tests use an in-memory SQLite engine with `poolclass=StaticPool` (required - without it, each connection checkout would see its own empty `:memory:` database) and a session bound to a connection-level transaction that's rolled back at teardown for isolation, even though repositories only flush.
 - Retry-related client tests construct the client with near-zero `wait_min`/`wait_max`/`wait_multiplier` so exhausting retries doesn't add real seconds to the suite.
 - Fixtures for external APIs live in `fixtures/*.json` next to their tests and are meant to be realistic sample payloads, not minimal stubs - reuse and extend them rather than inlining ad hoc dicts when adding coverage for the same endpoint.
+- Scraping tests never launch a browser or touch the network: Playwright's `Page` and the `async_playwright()` stack are replaced by hand-rolled fakes in `tests/infrastructure/providers/scraping/fakes.py` (failure queues let a test script "fail twice, then succeed" to exercise retries without real waits). The `.html` fixtures for the three bookmakers encode the *same* logical odds content in each site's own markup/language/decimal format, so `test_scrapers_parsing.py` parametrizes one expected result across all scrapers - keep that equivalence when extending them.
