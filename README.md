@@ -13,9 +13,10 @@ Construido con **Clean Architecture** y **Domain-Driven Design**, capa por capa,
 | 3 | Ingesta de cuotas sharp y forma de equipo (The Odds API) | ✅ |
 | 4 | Ingesta de datos de jugador: stats, lesiones, alineaciones (Sportmonks) | ✅ |
 | 5 | Scraping de casas locales con Playwright: mercados de partido y props de jugador | ✅ |
-| 6+ | Casos de uso de aplicación, cálculo de EV, capa de presentación | ⏳ pendiente |
+| 6 | Motor matemático de mercado: devig (4 métodos), cálculo de EV, sizing de Kelly fraccional | ✅ |
+| 7+ | Casos de uso de aplicación conectando el motor a datos reales, capa de presentación | ⏳ pendiente |
 
-`src/application/` y `src/presentation/` existen como esqueleto pero aún no tienen lógica: todavía no hay cálculo de probabilidad justa, de edge, ni una API/CLI expuesta.
+`src/application/` y `src/presentation/` existen como esqueleto pero aún no tienen lógica: el motor matemático (`src/domain/services/market_model/`) ya calcula probabilidad justa, edge y stake sugerido, pero todavía no hay un caso de uso que lo conecte a los proveedores de cuotas reales, ni una API/CLI expuesta.
 
 ## Arquitectura
 
@@ -25,7 +26,7 @@ Cuatro capas, dependencias apuntando siempre hacia adentro:
 presentation  →  application  →  domain  ←  infrastructure
 ```
 
-- **`src/domain/`** — puro, sin dependencias de ninguna otra capa. Entidades y value objects son dataclasses inmutables (`frozen=True, slots=True`) que se validan a sí mismas en `__post_init__`. Los puertos (`src/domain/ports/`) son interfaces abstractas (ABC) que la infraestructura implementa.
+- **`src/domain/`** — puro, sin dependencias de ninguna otra capa. Entidades y value objects son dataclasses inmutables (`frozen=True, slots=True`) que se validan a sí mismas en `__post_init__`. Los puertos (`src/domain/ports/`) son interfaces abstractas (ABC) que la infraestructura implementa. `src/domain/services/market_model/` es el motor cuantitativo: cuatro estrategias de devig (Multiplicativo, Aditivo, Shin, Power) intercambiables (patrón Strategy), cálculo de EV y sizing de Kelly fraccional, orquestados por `MarketValueDetector`. 100% determinista, sin I/O.
 - **`src/infrastructure/`**
   - `persistence/` — modelos ORM, mappers Entity↔Model, repositorios concretos (patrón Repository + Data Mapper), migraciones Alembic (async).
   - `providers/api/` — adaptadores para APIs externas (patrón Adapter + DTO Pydantic + Mapper), con reintentos y manejo de errores propios de dominio (`ProviderUnavailableError`, `RateLimitError`).
@@ -54,7 +55,7 @@ El scraping de casas de apuestas debe **respetar los Términos de Servicio de ca
 - **httpx** (cliente HTTP async) + **tenacity** (reintentos con backoff exponencial)
 - **Playwright** (async, Chromium headless) para scraping de casas locales — los tests nunca abren un navegador real
 - **Pydantic** / **pydantic-settings** (DTOs y configuración)
-- **pytest** + **pytest-asyncio** + **pytest-cov** + **respx** (mocking HTTP, sin red real en tests)
+- **pytest** + **pytest-asyncio** + **pytest-cov** + **respx** (mocking HTTP, sin red real en tests) + **hypothesis** (property-based testing para el motor matemático)
 
 ## Instalación
 
