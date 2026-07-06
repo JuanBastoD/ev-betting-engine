@@ -5,7 +5,7 @@ from src.domain.entities.value_bet import ValueBet
 from src.domain.ports.value_bet_repository import ValueBetRepository
 from src.infrastructure.persistence.mappers import value_bet_from_model, value_bet_to_model
 from src.infrastructure.persistence.models import ValueBetModel
-from src.infrastructure.persistence.upserts import upsert_match
+from src.infrastructure.persistence.upserts import upsert_bookmaker, upsert_match
 
 
 class SqlAlchemyValueBetRepository(ValueBetRepository):
@@ -14,7 +14,8 @@ class SqlAlchemyValueBetRepository(ValueBetRepository):
     `ValueBet.match` carries the full `Match` entity, so `save` upserts it
     (and transitively its teams/league) before inserting the value bet row,
     guaranteeing the `matches.id` foreign key is satisfied without requiring
-    the caller to have saved the match separately first.
+    the caller to have saved the match separately first. `ValueBet.bookmaker`
+    (Phase 10) is optional, so it's only upserted when present.
     """
 
     def __init__(self, session: AsyncSession) -> None:
@@ -22,7 +23,12 @@ class SqlAlchemyValueBetRepository(ValueBetRepository):
 
     async def save(self, value_bet: ValueBet) -> None:
         await upsert_match(self._session, value_bet.match)
-        model = value_bet_to_model(value_bet)
+        bookmaker_id = (
+            await upsert_bookmaker(self._session, value_bet.bookmaker)
+            if value_bet.bookmaker is not None
+            else None
+        )
+        model = value_bet_to_model(value_bet, bookmaker_id=bookmaker_id)
         self._session.add(model)
         await self._session.flush()
 

@@ -136,8 +136,14 @@ class ValueBetModel(Base):
     model_source: Mapped[str] = mapped_column(String(32), nullable=False)
     # Only meaningful for model_source=PLAYER_PROPS bets; NULL otherwise.
     lineup_confirmed: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    # Phase 10: nullable since every ValueBet persisted before this column
+    # existed has no bookmaker on file.
+    bookmaker_id: Mapped[int | None] = mapped_column(
+        ForeignKey("bookmakers.id"), nullable=True, index=True
+    )
 
     match: Mapped[MatchModel] = relationship(lazy="selectin")
+    bookmaker: Mapped[BookmakerModel | None] = relationship(lazy="selectin")
 
 
 class PlayerModel(Base):
@@ -170,3 +176,52 @@ class PlayerMatchStatsModel(Base):
 
     match: Mapped[MatchModel] = relationship(lazy="selectin")
     player: Mapped[PlayerModel] = relationship(lazy="selectin")
+
+
+class SettledBetModel(Base):
+    """Denormalized on purpose (Phase 10): a full copy of the settled
+    ValueBet's describing columns rather than a `value_bets.id` FK, so a
+    settled bet stays self-contained even if the original `value_bets` row
+    is later pruned/changes - calibration only ever reads this table.
+    """
+
+    __tablename__ = "settled_bets"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    match_id: Mapped[str] = mapped_column(ForeignKey("matches.id"), nullable=False, index=True)
+    market_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    outcome: Mapped[str] = mapped_column(String(64), nullable=False)
+    line: Mapped[float | None] = mapped_column(Float, nullable=True)
+    local_odds: Mapped[float] = mapped_column(Float, nullable=False)
+    fair_probability: Mapped[float] = mapped_column(Float, nullable=False)
+    edge_percentage: Mapped[float] = mapped_column(Float, nullable=False)
+    suggested_stake: Mapped[float] = mapped_column(Float, nullable=False)
+    model_source: Mapped[str] = mapped_column(String(32), nullable=False)
+    lineup_confirmed: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    bookmaker_id: Mapped[int | None] = mapped_column(
+        ForeignKey("bookmakers.id"), nullable=True, index=True
+    )
+    # BetResult (domain enum) stored as its string value.
+    result: Mapped[str] = mapped_column(String(16), nullable=False)
+    settled_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False, index=True)
+    closing_sharp_odds: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+    match: Mapped[MatchModel] = relationship(lazy="selectin")
+    bookmaker: Mapped[BookmakerModel | None] = relationship(lazy="selectin")
+
+
+class CalibrationFactorModel(Base):
+    """One versioned row per `CorrectionFactorService.compute_factors()`
+    call - never updated in place, so the full correction history per
+    segment stays auditable."""
+
+    __tablename__ = "calibration_factors"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    segment_type: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    segment_value: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    factor: Mapped[float] = mapped_column(Float, nullable=False)
+    sample_size: Mapped[int] = mapped_column(Integer, nullable=False)
+    computed_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False, index=True)
+    data_range_start: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)
+    data_range_end: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)

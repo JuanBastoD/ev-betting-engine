@@ -13,6 +13,8 @@ EXPECTED_TABLES = {
     "value_bets",
     "players",
     "player_match_stats",
+    "settled_bets",
+    "calibration_factors",
 }
 
 

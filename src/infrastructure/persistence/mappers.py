@@ -5,6 +5,7 @@ This is the only place that is allowed to know about both the domain
 from here.
 """
 
+from src.domain.entities.bet_result import BetResult
 from src.domain.entities.bookmaker import Bookmaker
 from src.domain.entities.league import League
 from src.domain.entities.market_type import MarketType
@@ -15,20 +16,24 @@ from src.domain.entities.player import Player
 from src.domain.entities.player_match_stats import PlayerMatchStats
 from src.domain.entities.player_position import PlayerPosition
 from src.domain.entities.selection import Selection
+from src.domain.entities.settled_bet import SettledBet
 from src.domain.entities.team import Team
 from src.domain.entities.team_form import TeamForm
 from src.domain.entities.value_bet import ValueBet
+from src.domain.services.calibration.correction_factor import CorrectionFactor
 from src.domain.value_objects.decimal_odds import DecimalOdds
 from src.domain.value_objects.edge_percentage import EdgePercentage
 from src.domain.value_objects.probability import Probability
 from src.domain.value_objects.stake import Stake
 from src.infrastructure.persistence.models import (
     BookmakerModel,
+    CalibrationFactorModel,
     LeagueModel,
     MatchModel,
     OddsQuoteModel,
     PlayerMatchStatsModel,
     PlayerModel,
+    SettledBetModel,
     TeamFormModel,
     TeamModel,
     ValueBetModel,
@@ -135,7 +140,7 @@ def team_form_from_model(model: TeamFormModel) -> TeamForm:
     )
 
 
-def value_bet_to_model(value_bet: ValueBet) -> ValueBetModel:
+def value_bet_to_model(value_bet: ValueBet, *, bookmaker_id: int | None = None) -> ValueBetModel:
     return ValueBetModel(
         match_id=value_bet.match.id,
         local_odds=value_bet.local_odds.value,
@@ -144,6 +149,7 @@ def value_bet_to_model(value_bet: ValueBet) -> ValueBetModel:
         suggested_stake=value_bet.suggested_stake.amount,
         model_source=value_bet.model_source.value,
         lineup_confirmed=value_bet.lineup_confirmed,
+        bookmaker_id=bookmaker_id,
         **_selection_to_columns(value_bet.selection),
     )
 
@@ -158,6 +164,7 @@ def value_bet_from_model(model: ValueBetModel) -> ValueBet:
         suggested_stake=Stake(model.suggested_stake),
         lineup_confirmed=model.lineup_confirmed,
         model_source=ModelSource(model.model_source),
+        bookmaker=bookmaker_from_model(model.bookmaker) if model.bookmaker is not None else None,
     )
 
 
@@ -208,4 +215,76 @@ def player_match_stats_from_model(model: PlayerMatchStatsModel) -> PlayerMatchSt
         yellow_cards=model.yellow_cards,
         red_cards=model.red_cards,
         corners_won=model.corners_won,
+    )
+
+
+def settled_bet_to_model(
+    settled_bet: SettledBet, *, bookmaker_id: int | None = None
+) -> SettledBetModel:
+    value_bet = settled_bet.value_bet
+    return SettledBetModel(
+        match_id=value_bet.match.id,
+        local_odds=value_bet.local_odds.value,
+        fair_probability=value_bet.fair_probability.value,
+        edge_percentage=value_bet.edge.value,
+        suggested_stake=value_bet.suggested_stake.amount,
+        model_source=value_bet.model_source.value,
+        lineup_confirmed=value_bet.lineup_confirmed,
+        bookmaker_id=bookmaker_id,
+        result=settled_bet.result.value,
+        settled_at=settled_bet.settled_at,
+        closing_sharp_odds=(
+            settled_bet.closing_sharp_odds.value
+            if settled_bet.closing_sharp_odds is not None
+            else None
+        ),
+        **_selection_to_columns(value_bet.selection),
+    )
+
+
+def settled_bet_from_model(model: SettledBetModel) -> SettledBet:
+    value_bet = ValueBet(
+        match=match_from_model(model.match),
+        selection=_selection_from_columns(model.market_type, model.outcome, model.line),
+        local_odds=DecimalOdds(model.local_odds),
+        fair_probability=Probability(model.fair_probability),
+        edge=EdgePercentage(model.edge_percentage),
+        suggested_stake=Stake(model.suggested_stake),
+        model_source=ModelSource(model.model_source),
+        lineup_confirmed=model.lineup_confirmed,
+        bookmaker=bookmaker_from_model(model.bookmaker) if model.bookmaker is not None else None,
+    )
+    return SettledBet(
+        value_bet=value_bet,
+        result=BetResult(model.result),
+        settled_at=model.settled_at,
+        closing_sharp_odds=(
+            DecimalOdds(model.closing_sharp_odds)
+            if model.closing_sharp_odds is not None
+            else None
+        ),
+    )
+
+
+def correction_factor_to_model(correction_factor: CorrectionFactor) -> CalibrationFactorModel:
+    return CalibrationFactorModel(
+        segment_type=correction_factor.segment_type,
+        segment_value=correction_factor.segment_value,
+        factor=correction_factor.factor,
+        sample_size=correction_factor.sample_size,
+        computed_at=correction_factor.computed_at,
+        data_range_start=correction_factor.data_range_start,
+        data_range_end=correction_factor.data_range_end,
+    )
+
+
+def correction_factor_from_model(model: CalibrationFactorModel) -> CorrectionFactor:
+    return CorrectionFactor(
+        segment_type=model.segment_type,
+        segment_value=model.segment_value,
+        factor=model.factor,
+        sample_size=model.sample_size,
+        computed_at=model.computed_at,
+        data_range_start=model.data_range_start,
+        data_range_end=model.data_range_end,
     )
