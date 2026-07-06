@@ -11,18 +11,22 @@ from src.domain.entities.odds_quote import OddsQuote
 from src.domain.entities.player import Player
 from src.domain.entities.player_match_stats import PlayerMatchStats
 from src.domain.entities.player_prop_market import PlayerPropMarket
+from src.domain.entities.settled_bet import SettledBet
 from src.domain.entities.team import Team
 from src.domain.entities.team_form import TeamForm
 from src.domain.entities.value_bet import ValueBet
+from src.domain.ports.correction_factor_repository import CorrectionFactorRepository
 from src.domain.ports.local_odds_provider import LocalOddsProvider
 from src.domain.ports.match_repository import MatchRepository
 from src.domain.ports.odds_repository import OddsRepository
 from src.domain.ports.player_repository import PlayerRepository
 from src.domain.ports.player_stats_provider import PlayerStatsProvider
 from src.domain.ports.player_stats_repository import PlayerStatsRepository
+from src.domain.ports.settled_bet_repository import SettledBetRepository
 from src.domain.ports.sharp_odds_provider import SharpOddsProvider
 from src.domain.ports.stats_provider import StatsProvider
 from src.domain.ports.value_bet_repository import ValueBetRepository
+from src.domain.services.calibration.correction_factor import CorrectionFactor
 
 
 class FakeMatchRepository(MatchRepository):
@@ -89,6 +93,28 @@ class FakeValueBetRepository(ValueBetRepository):
         return [vb for vb in self.saved if vb.match.id == match_id]
 
     async def list_all(self) -> list[ValueBet]:
+        return list(self.saved)
+
+
+class FakeSettledBetRepository(SettledBetRepository):
+    def __init__(self) -> None:
+        self.saved: list[SettledBet] = []
+
+    async def save(self, settled_bet: SettledBet) -> None:
+        self.saved.append(settled_bet)
+
+    async def list_all(self) -> list[SettledBet]:
+        return list(self.saved)
+
+
+class FakeCorrectionFactorRepository(CorrectionFactorRepository):
+    def __init__(self) -> None:
+        self.saved: list[CorrectionFactor] = []
+
+    async def save(self, correction_factor: CorrectionFactor) -> None:
+        self.saved.append(correction_factor)
+
+    async def list_all(self) -> list[CorrectionFactor]:
         return list(self.saved)
 
 
