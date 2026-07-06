@@ -16,23 +16,35 @@ import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.pool import StaticPool
 
+from src.application.use_cases.compute_correction_factors import (
+    ComputeCorrectionFactorsUseCase,
+)
+from src.application.use_cases.get_calibration_report import GetCalibrationReportUseCase
 from src.application.use_cases.list_value_bets import ListValueBetsUseCase
 from src.application.use_cases.run_pipeline import RunPipelineUseCase
+from src.application.use_cases.settle_bet import SettleBetUseCase
 from src.domain.ports.match_repository import MatchRepository
+from src.domain.services.calibration.calibration_service import CalibrationService
+from src.domain.services.calibration.correction_factor import CorrectionFactorService
 from src.domain.services.market_model.detector import MarketValueDetector
 from src.domain.services.match_model.match_value_detector import ConfirmationMode, MatchValueDetector
 from src.domain.services.player_props.player_prop_detector import PlayerPropDetector
 from src.infrastructure.config import Settings
 from src.infrastructure.persistence.models import Base
 from src.presentation.api.dependencies import (
+    build_calibration_service,
+    build_correction_factor_service,
     build_market_value_detector,
     build_match_value_detector,
     build_player_prop_detector,
     build_run_pipeline_use_case,
+    get_calibration_report_use_case,
+    get_compute_correction_factors_use_case,
     get_list_value_bets_use_case,
     get_local_odds_provider,
     get_match_repository,
     get_run_pipeline_use_case,
+    get_settle_bet_use_case,
     get_settings,
 )
 from tests.fakes import FakeLocalOddsProvider
@@ -132,3 +144,34 @@ async def test_get_local_odds_provider_opens_and_closes_a_browser_session(settin
 
         fake_session.__aenter__.assert_awaited_once()
         fake_session.__aexit__.assert_awaited_once()
+
+
+def test_build_calibration_service_uses_configured_bucket_width(settings: Settings) -> None:
+    service = build_calibration_service(settings)
+    assert isinstance(service, CalibrationService)
+
+
+def test_build_correction_factor_service_uses_configured_min_sample_size(
+    settings: Settings,
+) -> None:
+    service = build_correction_factor_service(settings)
+    assert isinstance(service, CorrectionFactorService)
+
+
+async def test_get_settle_bet_use_case_wires_real_repositories(session: AsyncSession) -> None:
+    use_case = await get_settle_bet_use_case(session)
+    assert isinstance(use_case, SettleBetUseCase)
+
+
+async def test_get_calibration_report_use_case_wires_real_dependencies(
+    session: AsyncSession, settings: Settings
+) -> None:
+    use_case = await get_calibration_report_use_case(session, settings)
+    assert isinstance(use_case, GetCalibrationReportUseCase)
+
+
+async def test_get_compute_correction_factors_use_case_wires_real_dependencies(
+    session: AsyncSession, settings: Settings
+) -> None:
+    use_case = await get_compute_correction_factors_use_case(session, settings)
+    assert isinstance(use_case, ComputeCorrectionFactorsUseCase)

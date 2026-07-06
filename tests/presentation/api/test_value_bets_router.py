@@ -9,6 +9,7 @@ import httpx
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.domain.entities.bookmaker import Bookmaker
 from src.domain.entities.league import League
 from src.domain.entities.market_type import MarketType
 from src.domain.entities.match import Match
@@ -37,11 +38,13 @@ def _match(match_id: str, league_id: str, kickoff: datetime) -> Match:
 def _bet(
     match: Match, *, market_type: MarketType = MarketType.MATCH_WINNER_1X2, edge: float = 10.0,
     model_source: ModelSource = ModelSource.MARKET, lineup_confirmed: bool | None = None,
+    bookmaker: Bookmaker | None = None,
 ) -> ValueBet:
     return ValueBet(
         match=match, selection=Selection(market_type=market_type, outcome="Home"),
         local_odds=DecimalOdds(2.20), fair_probability=Probability(0.5), edge=EdgePercentage(edge),
         suggested_stake=Stake(0.05), model_source=model_source, lineup_confirmed=lineup_confirmed,
+        bookmaker=bookmaker,
     )
 
 
@@ -166,3 +169,27 @@ async def test_market_bet_has_null_lineup_confirmed(
     response = await client.get("/value-bets")
 
     assert response.json()["value_bets"][0]["lineup_confirmed"] is None
+
+
+async def test_bet_without_bookmaker_has_null_bookmaker_field(
+    client: httpx.AsyncClient, session: AsyncSession, match_a: Match
+) -> None:
+    repository = SqlAlchemyValueBetRepository(session)
+    await repository.save(_bet(match_a))
+    await session.flush()
+
+    response = await client.get("/value-bets")
+
+    assert response.json()["value_bets"][0]["bookmaker"] is None
+
+
+async def test_bet_with_bookmaker_returns_its_name(
+    client: httpx.AsyncClient, session: AsyncSession, match_a: Match
+) -> None:
+    repository = SqlAlchemyValueBetRepository(session)
+    await repository.save(_bet(match_a, bookmaker=Bookmaker(name="Betplay", is_sharp=False, region="CO")))
+    await session.flush()
+
+    response = await client.get("/value-bets")
+
+    assert response.json()["value_bets"][0]["bookmaker"] == "Betplay"
