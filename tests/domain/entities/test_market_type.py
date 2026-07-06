@@ -5,6 +5,7 @@ def test_market_type_members() -> None:
     assert MarketType.MATCH_WINNER_1X2 == "MATCH_WINNER_1X2"
     assert MarketType.OVER_UNDER == "OVER_UNDER"
     assert MarketType.BTTS == "BTTS"
+    assert MarketType.PLAYER_PROP == "PLAYER_PROP"
 
 
 def test_market_type_is_str_enum() -> None:

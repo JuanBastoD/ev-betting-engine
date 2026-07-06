@@ -7,3 +7,4 @@ class MarketType(str, Enum):
     MATCH_WINNER_1X2 = "MATCH_WINNER_1X2"
     OVER_UNDER = "OVER_UNDER"
     BTTS = "BTTS"
+    PLAYER_PROP = "PLAYER_PROP"
