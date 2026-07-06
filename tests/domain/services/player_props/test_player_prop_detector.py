@@ -76,6 +76,7 @@ def test_detects_a_plus_ev_prop_with_confirmed_lineup(
     assert bet.edge.value == pytest.approx((MODEL_OVER_1_5 * 1.90 - 1) * 100)
     assert bet.model_source is ModelSource.STATISTICAL
     assert bet.suggested_stake.amount > 0.0
+    assert bet.bookmaker is prop_market.bookmaker
 
 
 def test_returns_none_when_below_the_ev_threshold(

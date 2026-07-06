@@ -40,8 +40,10 @@ from src.domain.entities.player_prop_type import PlayerPropType
 from src.domain.entities.team import Team
 from src.domain.services.match_model.team_strength import TeamStrength
 from src.domain.services.player_props.player_model import (
+    MLPropsModel,
     PlayerPropsModel,
     PoissonPropsModel,
+    TrainablePropsModel,
     _ewma_per_90_rate,
     confidence_adjusted_probability,
     confidence_penalty,
@@ -433,6 +435,39 @@ def test_minutes_baseline_must_be_positive() -> None:
 def test_player_props_model_cannot_be_instantiated_directly() -> None:
     with pytest.raises(TypeError):
         PlayerPropsModel()
+
+
+def test_trainable_props_model_cannot_be_instantiated_directly() -> None:
+    with pytest.raises(TypeError):
+        TrainablePropsModel()
+
+
+def test_trainable_props_model_is_a_player_props_model() -> None:
+    assert issubclass(TrainablePropsModel, PlayerPropsModel)
+
+
+def test_ml_props_model_fit_raises_not_implemented() -> None:
+    with pytest.raises(NotImplementedError):
+        MLPropsModel().fit([])
+
+
+def test_ml_props_model_version_raises_not_implemented() -> None:
+    with pytest.raises(NotImplementedError):
+        _ = MLPropsModel().model_version
+
+
+def test_ml_props_model_predict_probability_raises_not_implemented(
+    make_stats: Callable[..., PlayerMatchStats],
+) -> None:
+    stats = [make_stats(minutes_played=90, shots_on_target=2)]
+    with pytest.raises(NotImplementedError):
+        MLPropsModel().predict_probability(
+            historical_stats=stats,
+            prop_type=PlayerPropType.SHOTS_ON_TARGET,
+            outcome="Over",
+            line=1.5,
+            expected_minutes=90,
+        )
 
 
 # --- Property-based tests (hypothesis) ------------------------------------------

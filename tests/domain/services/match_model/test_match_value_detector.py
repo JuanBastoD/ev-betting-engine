@@ -127,6 +127,7 @@ def test_confirmation_mode_generates_a_value_bet_when_both_sources_agree(
     assert bet.fair_probability.value == pytest.approx(expected_blend)
     assert bet.edge.value == pytest.approx((expected_blend * 2.30 - 1) * 100)
     assert bet.suggested_stake.amount > 0.0
+    assert bet.bookmaker is local_bookmaker
 
 
 def test_confirmation_mode_skips_when_only_the_market_agrees(
@@ -329,6 +330,7 @@ def test_independent_mode_ignores_the_market_entirely(
     assert bet.model_source is ModelSource.STATISTICAL
     assert bet.fair_probability.value == pytest.approx(STAT_HOME_WIN)
     assert bet.edge.value == pytest.approx((STAT_HOME_WIN * 1.80 - 1) * 100)
+    assert bet.bookmaker is local_bookmaker
 
 
 def test_independent_mode_still_filters_by_ev_threshold(

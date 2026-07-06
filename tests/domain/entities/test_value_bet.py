@@ -2,6 +2,7 @@ from datetime import datetime
 
 import pytest
 
+from src.domain.entities.bookmaker import Bookmaker
 from src.domain.entities.league import League
 from src.domain.entities.market_type import MarketType
 from src.domain.entities.match import Match
@@ -46,6 +47,7 @@ def test_valid_value_bet_construction(match: Match, selection: Selection) -> Non
     assert value_bet.edge.value == 10.0
     assert value_bet.model_source is ModelSource.MARKET
     assert value_bet.lineup_confirmed is None
+    assert value_bet.bookmaker is None
 
 
 def test_lineup_confirmed_defaults_to_none_and_is_settable(match: Match, selection: Selection) -> None:
@@ -60,6 +62,21 @@ def test_lineup_confirmed_defaults_to_none_and_is_settable(match: Match, selecti
         lineup_confirmed=False,
     )
     assert value_bet.lineup_confirmed is False
+
+
+def test_bookmaker_defaults_to_none_and_is_settable(match: Match, selection: Selection) -> None:
+    bookmaker = Bookmaker(name="Betplay", is_sharp=False, region="CO")
+    value_bet = ValueBet(
+        match=match,
+        selection=selection,
+        local_odds=DecimalOdds(2.20),
+        fair_probability=Probability(0.5),
+        edge=EdgePercentage(10.0),
+        suggested_stake=Stake(25.0),
+        model_source=ModelSource.MARKET,
+        bookmaker=bookmaker,
+    )
+    assert value_bet.bookmaker is bookmaker
 
 
 @pytest.mark.parametrize("edge_value", [0.0, -5.0])

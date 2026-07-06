@@ -61,6 +61,7 @@ def test_detects_a_single_plus_ev_selection_and_ignores_the_rest(
     assert bet.edge.is_positive_ev is True
     assert bet.model_source is ModelSource.MARKET
     assert bet.suggested_stake.amount > 0.0
+    assert bet.bookmaker is local_bookmaker
 
 
 def test_min_ev_threshold_excludes_edges_below_the_bar(

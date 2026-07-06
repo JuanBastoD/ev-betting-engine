@@ -22,7 +22,9 @@ from src.domain.services.match_model.team_strength import TeamStrength
 from src.domain.services.match_model.xg_model import (
     DixonColesModel,
     MatchStatisticalModel,
+    MLMatchModel,
     OverUnderProbability,
+    TrainableMatchModel,
 )
 
 
@@ -261,6 +263,34 @@ def test_extreme_strengths_that_underflow_the_grid_raise(
 def test_match_statistical_model_cannot_be_instantiated_directly() -> None:
     with pytest.raises(TypeError):
         MatchStatisticalModel()
+
+
+def test_trainable_match_model_cannot_be_instantiated_directly() -> None:
+    with pytest.raises(TypeError):
+        TrainableMatchModel()
+
+
+def test_trainable_match_model_is_a_match_statistical_model() -> None:
+    assert issubclass(TrainableMatchModel, MatchStatisticalModel)
+
+
+def test_ml_match_model_fit_raises_not_implemented() -> None:
+    with pytest.raises(NotImplementedError):
+        MLMatchModel().fit([])
+
+
+def test_ml_match_model_version_raises_not_implemented() -> None:
+    with pytest.raises(NotImplementedError):
+        _ = MLMatchModel().model_version
+
+
+def test_ml_match_model_predict_match_probabilities_raises_not_implemented() -> None:
+    home_team = Team(id="team-home", name="River Plate")
+    away_team = Team(id="team-away", name="Boca Juniors")
+    home = TeamStrength(team=home_team, attack=1.0, defense=1.0)
+    away = TeamStrength(team=away_team, attack=1.0, defense=1.0)
+    with pytest.raises(NotImplementedError):
+        MLMatchModel().predict_match_probabilities(home, away, league_average_goals=1.35)
 
 
 # --- Property-based tests (hypothesis) ---------------------------------------
