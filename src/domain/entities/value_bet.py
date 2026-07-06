@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+from src.domain.entities.bookmaker import Bookmaker
 from src.domain.entities.match import Match
 from src.domain.entities.model_source import ModelSource
 from src.domain.entities.selection import Selection
@@ -20,6 +21,12 @@ class ValueBet:
     (optional, defaulting to `None`) rather than living only on the
     transient `PlayerPropDetection` wrapper, since a listing endpoint
     reading persisted `ValueBet`s back out has no other way to recover it.
+
+    `bookmaker` (Phase 10: added once calibration needed to segment
+    settled-bet accuracy per bookmaker, closing the second of the "flag,
+    don't fix" gaps from Phase 6) is the *local* book this odds observation
+    came from - optional and defaulting to `None` for the same
+    backward-compatibility reason as `lineup_confirmed`.
     """
 
     match: Match
@@ -30,6 +37,7 @@ class ValueBet:
     suggested_stake: Stake
     model_source: ModelSource
     lineup_confirmed: bool | None = None
+    bookmaker: Bookmaker | None = None
 
     def __post_init__(self) -> None:
         if self.edge.value <= 0.0:
