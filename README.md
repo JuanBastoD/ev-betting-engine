@@ -15,9 +15,10 @@ Construido con **Clean Architecture** y **Domain-Driven Design**, capa por capa,
 | 5 | Scraping de casas locales con Playwright: mercados de partido y props de jugador | ✅ |
 | 6 | Motor matemático de mercado: devig (4 métodos), cálculo de EV, sizing de Kelly fraccional | ✅ |
 | 7 | Motor estadístico de partido: xG Dixon-Coles, ajuste por ausencias, doble confirmación con el mercado | ✅ |
-| 8+ | Casos de uso de aplicación conectando ambos motores a datos reales, capa de presentación | ⏳ pendiente |
+| 8 | Motor estadístico de props de jugador: modelo Poisson con EWMA, ajuste por minutos y rival | ✅ |
+| 9+ | Casos de uso de aplicación conectando los tres motores a datos reales, capa de presentación | ⏳ pendiente |
 
-`src/application/` y `src/presentation/` existen como esqueleto pero aún no tienen lógica: los dos motores cuantitativos (mercado en `src/domain/services/market_model/`, estadístico en `src/domain/services/match_model/`) ya calculan probabilidad justa, edge y stake sugerido, pero todavía no hay un caso de uso que los conecte a los proveedores de datos reales, ni una API/CLI expuesta.
+`src/application/` y `src/presentation/` existen como esqueleto pero aún no tienen lógica: los tres motores cuantitativos (mercado, partido y props de jugador, todos en `src/domain/services/`) ya calculan probabilidad justa, edge y stake sugerido, pero todavía no hay un caso de uso que los conecte a los proveedores de datos reales, ni una API/CLI expuesta.
 
 ## Arquitectura
 
@@ -27,9 +28,10 @@ Cuatro capas, dependencias apuntando siempre hacia adentro:
 presentation  →  application  →  domain  ←  infrastructure
 ```
 
-- **`src/domain/`** — puro, sin dependencias de ninguna otra capa. Entidades y value objects son dataclasses inmutables (`frozen=True, slots=True`) que se validan a sí mismas en `__post_init__`. Los puertos (`src/domain/ports/`) son interfaces abstractas (ABC) que la infraestructura implementa. Dos motores cuantitativos, ambos 100% deterministas y sin I/O:
+- **`src/domain/`** — puro, sin dependencias de ninguna otra capa. Entidades y value objects son dataclasses inmutables (`frozen=True, slots=True`) que se validan a sí mismas en `__post_init__`. Los puertos (`src/domain/ports/`) son interfaces abstractas (ABC) que la infraestructura implementa. Tres motores cuantitativos, todos 100% deterministas y sin I/O:
   - `src/domain/services/market_model/` — cuatro estrategias de devig (Multiplicativo, Aditivo, Shin, Power) intercambiables (patrón Strategy), cálculo de EV y sizing de Kelly fraccional, orquestados por `MarketValueDetector`.
   - `src/domain/services/match_model/` — modelo de Goles Esperados (xG) Dixon-Coles a partir de la forma de los equipos, con ajuste por ausencias de jugadores clave; `MatchValueDetector` reutiliza el motor de mercado y aplica una política de doble confirmación configurable (mercado + modelo estadístico, o modelo estadístico solo).
+  - `src/domain/services/player_props/` — modelo Poisson (patrón Strategy, `PoissonPropsModel`) de la probabilidad de superar una línea Over/Under en una métrica de jugador (goles, tiros a puerta, asistencias, tarjetas), a partir de una media móvil exponencial de su tasa histórica, ajustada por minutos esperados, fortaleza del rival y una penalización de confianza configurable cuando la alineación no está confirmada o el jugador está en duda/lesionado. `PlayerPropDetector` reutiliza el cálculo de EV y el Kelly fraccional del motor de mercado.
 - **`src/infrastructure/`**
   - `persistence/` — modelos ORM, mappers Entity↔Model, repositorios concretos (patrón Repository + Data Mapper), migraciones Alembic (async).
   - `providers/api/` — adaptadores para APIs externas (patrón Adapter + DTO Pydantic + Mapper), con reintentos y manejo de errores propios de dominio (`ProviderUnavailableError`, `RateLimitError`).
