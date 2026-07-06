@@ -15,6 +15,12 @@ def _isolate_env(monkeypatch: pytest.MonkeyPatch) -> None:
         "KELLY_FRACTION",
         "MIN_EV_THRESHOLD",
         "SHARP_BOOKMAKER",
+        "SPORT_KEY",
+        "LOCAL_BOOKMAKER",
+        "LEAGUE_AVERAGE_GOALS",
+        "MATCH_CONFIRMATION_MODE",
+        "MARKET_WEIGHT",
+        "PIPELINE_INTERVAL_SECONDS",
     ):
         monkeypatch.delenv(key, raising=False)
 
@@ -49,6 +55,12 @@ def test_settings_applies_defaults_for_optional_values(
     assert settings.kelly_fraction == 0.5
     assert settings.min_ev_threshold == 0.02
     assert settings.sharp_bookmaker == "Pinnacle"
+    assert settings.sport_key == "soccer_epl"
+    assert settings.local_bookmaker == "Betplay"
+    assert settings.league_average_goals == 1.35
+    assert settings.match_confirmation_mode == "CONFIRMATION"
+    assert settings.market_weight == 0.5
+    assert settings.pipeline_interval_seconds == 3600
 
 
 def test_settings_reads_overridden_values_from_env(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
@@ -59,6 +71,12 @@ def test_settings_reads_overridden_values_from_env(monkeypatch: pytest.MonkeyPat
     monkeypatch.setenv("KELLY_FRACTION", "0.25")
     monkeypatch.setenv("MIN_EV_THRESHOLD", "0.05")
     monkeypatch.setenv("SHARP_BOOKMAKER", "Betfair Exchange")
+    monkeypatch.setenv("SPORT_KEY", "soccer_spain_la_liga")
+    monkeypatch.setenv("LOCAL_BOOKMAKER", "Stake")
+    monkeypatch.setenv("LEAGUE_AVERAGE_GOALS", "1.5")
+    monkeypatch.setenv("MATCH_CONFIRMATION_MODE", "INDEPENDENT")
+    monkeypatch.setenv("MARKET_WEIGHT", "0.7")
+    monkeypatch.setenv("PIPELINE_INTERVAL_SECONDS", "1800")
 
     settings = Settings()
 
@@ -67,6 +85,12 @@ def test_settings_reads_overridden_values_from_env(monkeypatch: pytest.MonkeyPat
     assert settings.kelly_fraction == 0.25
     assert settings.min_ev_threshold == 0.05
     assert settings.sharp_bookmaker == "Betfair Exchange"
+    assert settings.sport_key == "soccer_spain_la_liga"
+    assert settings.local_bookmaker == "Stake"
+    assert settings.league_average_goals == 1.5
+    assert settings.match_confirmation_mode == "INDEPENDENT"
+    assert settings.market_weight == 0.7
+    assert settings.pipeline_interval_seconds == 1800
 
 
 def test_settings_requires_database_url_and_odds_api_key(
@@ -94,6 +118,42 @@ def test_settings_rejects_kelly_fraction_out_of_range(
     monkeypatch.chdir(tmp_path)
     _set_required_env(monkeypatch)
     monkeypatch.setenv("KELLY_FRACTION", invalid_kelly_fraction)
+
+    with pytest.raises(ValidationError):
+        Settings()
+
+
+@pytest.mark.parametrize("invalid_value", ["0", "-1.5"])
+def test_settings_rejects_non_positive_league_average_goals(
+    monkeypatch: pytest.MonkeyPatch, tmp_path, invalid_value: str
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    _set_required_env(monkeypatch)
+    monkeypatch.setenv("LEAGUE_AVERAGE_GOALS", invalid_value)
+
+    with pytest.raises(ValidationError):
+        Settings()
+
+
+@pytest.mark.parametrize("invalid_value", ["-0.1", "1.1"])
+def test_settings_rejects_market_weight_out_of_range(
+    monkeypatch: pytest.MonkeyPatch, tmp_path, invalid_value: str
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    _set_required_env(monkeypatch)
+    monkeypatch.setenv("MARKET_WEIGHT", invalid_value)
+
+    with pytest.raises(ValidationError):
+        Settings()
+
+
+@pytest.mark.parametrize("invalid_value", ["0", "-10"])
+def test_settings_rejects_non_positive_pipeline_interval(
+    monkeypatch: pytest.MonkeyPatch, tmp_path, invalid_value: str
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    _set_required_env(monkeypatch)
+    monkeypatch.setenv("PIPELINE_INTERVAL_SECONDS", invalid_value)
 
     with pytest.raises(ValidationError):
         Settings()

@@ -23,3 +23,17 @@ class Settings(BaseSettings):
     kelly_fraction: float = Field(default=0.5, ge=0.0, le=1.0, alias="KELLY_FRACTION")
     min_ev_threshold: float = Field(default=0.02, ge=0.0, alias="MIN_EV_THRESHOLD")
     sharp_bookmaker: str = Field(default="Pinnacle", alias="SHARP_BOOKMAKER")
+
+    # --- Phase 9: orchestration (pipeline/scheduler/API) ---
+    sport_key: str = Field(default="soccer_epl", alias="SPORT_KEY")
+    local_bookmaker: str = Field(default="Betplay", alias="LOCAL_BOOKMAKER")
+    # Average goals scored per team per match across the tracked league -
+    # team_strength.py needs this to normalize attack/defense ratings, and
+    # deriving it needs every team's form at once (out of scope for a
+    # single-team StatsProvider call), so it's plain configuration for now.
+    league_average_goals: float = Field(default=1.35, gt=0.0, alias="LEAGUE_AVERAGE_GOALS")
+    # CONFIRMATION (both market and statistical model must agree) or
+    # INDEPENDENT (statistical model alone) - see ConfirmationMode.
+    match_confirmation_mode: str = Field(default="CONFIRMATION", alias="MATCH_CONFIRMATION_MODE")
+    market_weight: float = Field(default=0.5, ge=0.0, le=1.0, alias="MARKET_WEIGHT")
+    pipeline_interval_seconds: int = Field(default=3600, gt=0, alias="PIPELINE_INTERVAL_SECONDS")
