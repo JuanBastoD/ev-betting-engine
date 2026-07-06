@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 
 import pytest
 
+from src.domain.entities.bet_result import BetResult
 from src.domain.entities.bookmaker import Bookmaker
 from src.domain.entities.league import League
 from src.domain.entities.market_type import MarketType
@@ -11,9 +12,11 @@ from src.domain.entities.odds_quote import OddsQuote
 from src.domain.entities.player import Player
 from src.domain.entities.player_match_stats import PlayerMatchStats
 from src.domain.entities.selection import Selection
+from src.domain.entities.settled_bet import SettledBet
 from src.domain.entities.team import Team
 from src.domain.entities.team_form import TeamForm
 from src.domain.entities.value_bet import ValueBet
+from src.domain.services.calibration.correction_factor import CorrectionFactor
 from src.domain.value_objects.decimal_odds import DecimalOdds
 from src.domain.value_objects.edge_percentage import EdgePercentage
 from src.domain.value_objects.probability import Probability
@@ -21,6 +24,8 @@ from src.domain.value_objects.stake import Stake
 from src.infrastructure.persistence.mappers import (
     bookmaker_from_model,
     bookmaker_to_model,
+    correction_factor_from_model,
+    correction_factor_to_model,
     league_from_model,
     league_to_model,
     match_from_model,
@@ -31,6 +36,8 @@ from src.infrastructure.persistence.mappers import (
     player_match_stats_from_model,
     player_match_stats_to_model,
     player_to_model,
+    settled_bet_from_model,
+    settled_bet_to_model,
     team_form_from_model,
     team_form_to_model,
     team_from_model,
@@ -164,6 +171,33 @@ def test_value_bet_round_trip(
     assert restored == value_bet
 
 
+def test_value_bet_round_trip_with_bookmaker(
+    match: Match, home_team: Team, away_team: Team, league: League, selection: Selection, bookmaker: Bookmaker
+) -> None:
+    value_bet = ValueBet(
+        match=match,
+        selection=selection,
+        local_odds=DecimalOdds(2.20),
+        fair_probability=Probability(0.5),
+        edge=EdgePercentage(10.0),
+        suggested_stake=Stake(25.0),
+        model_source=ModelSource.MARKET,
+        bookmaker=bookmaker,
+    )
+
+    model = value_bet_to_model(value_bet, bookmaker_id=1)
+    match_model = match_to_model(match)
+    match_model.home_team = team_to_model(home_team)
+    match_model.away_team = team_to_model(away_team)
+    match_model.league = league_to_model(league)
+    model.match = match_model
+    model.bookmaker = bookmaker_to_model(bookmaker)
+
+    restored = value_bet_from_model(model)
+
+    assert restored == value_bet
+
+
 def test_player_round_trip(player: Player, home_team: Team) -> None:
     model = player_to_model(player)
     model.team = team_to_model(home_team)
@@ -235,3 +269,89 @@ def test_player_match_stats_round_trip_without_corners_won(
 
     assert restored == stats
     assert restored.corners_won is None
+
+
+def _value_bet(match: Match, selection: Selection, bookmaker: Bookmaker | None = None) -> ValueBet:
+    return ValueBet(
+        match=match,
+        selection=selection,
+        local_odds=DecimalOdds(2.20),
+        fair_probability=Probability(0.5),
+        edge=EdgePercentage(10.0),
+        suggested_stake=Stake(25.0),
+        model_source=ModelSource.MARKET,
+        bookmaker=bookmaker,
+    )
+
+
+@pytest.mark.parametrize(
+    ("result", "closing_sharp_odds"),
+    [(BetResult.WON, 2.00), (BetResult.LOST, None), (BetResult.PUSH, 2.20)],
+)
+def test_settled_bet_round_trip(
+    match: Match,
+    home_team: Team,
+    away_team: Team,
+    league: League,
+    selection: Selection,
+    bookmaker: Bookmaker,
+    result: BetResult,
+    closing_sharp_odds: float | None,
+) -> None:
+    settled_bet = SettledBet(
+        value_bet=_value_bet(match, selection, bookmaker=bookmaker),
+        result=result,
+        settled_at=datetime(2026, 8, 16, 12, 0, tzinfo=timezone.utc),
+        closing_sharp_odds=DecimalOdds(closing_sharp_odds) if closing_sharp_odds else None,
+    )
+
+    model = settled_bet_to_model(settled_bet, bookmaker_id=1)
+    match_model = match_to_model(match)
+    match_model.home_team = team_to_model(home_team)
+    match_model.away_team = team_to_model(away_team)
+    match_model.league = league_to_model(league)
+    model.match = match_model
+    model.bookmaker = bookmaker_to_model(bookmaker)
+
+    restored = settled_bet_from_model(model)
+
+    assert restored == settled_bet
+
+
+def test_settled_bet_round_trip_without_bookmaker(
+    match: Match, home_team: Team, away_team: Team, league: League, selection: Selection
+) -> None:
+    settled_bet = SettledBet(
+        value_bet=_value_bet(match, selection),
+        result=BetResult.WON,
+        settled_at=datetime(2026, 8, 16, 12, 0, tzinfo=timezone.utc),
+    )
+
+    model = settled_bet_to_model(settled_bet)
+    match_model = match_to_model(match)
+    match_model.home_team = team_to_model(home_team)
+    match_model.away_team = team_to_model(away_team)
+    match_model.league = league_to_model(league)
+    model.match = match_model
+
+    restored = settled_bet_from_model(model)
+
+    assert restored == settled_bet
+    assert restored.value_bet.bookmaker is None
+
+
+def test_correction_factor_round_trip() -> None:
+    correction_factor = CorrectionFactor(
+        segment_type="market_type",
+        segment_value="PLAYER_PROP",
+        factor=0.92,
+        sample_size=150,
+        computed_at=datetime(2026, 9, 1, tzinfo=timezone.utc),
+        data_range_start=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        data_range_end=datetime(2026, 8, 1, tzinfo=timezone.utc),
+    )
+
+    model = correction_factor_to_model(correction_factor)
+    restored = correction_factor_from_model(model)
+
+    assert restored == correction_factor

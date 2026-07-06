@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.domain.entities.bookmaker import Bookmaker
 from src.domain.entities.league import League
 from src.domain.entities.match import Match
 from src.domain.entities.model_source import ModelSource
@@ -19,7 +20,11 @@ from src.infrastructure.persistence.repositories.value_bet_repository import (
 
 
 def _value_bet(
-    match: Match, selection: Selection, edge: float = 10.0, lineup_confirmed: bool | None = None
+    match: Match,
+    selection: Selection,
+    edge: float = 10.0,
+    lineup_confirmed: bool | None = None,
+    bookmaker: Bookmaker | None = None,
 ) -> ValueBet:
     return ValueBet(
         match=match,
@@ -30,6 +35,7 @@ def _value_bet(
         suggested_stake=Stake(25.0),
         model_source=ModelSource.MARKET,
         lineup_confirmed=lineup_confirmed,
+        bookmaker=bookmaker,
     )
 
 
@@ -104,3 +110,30 @@ async def test_lineup_confirmed_round_trips_through_persistence(
 
     assert results == [value_bet]
     assert results[0].lineup_confirmed is True
+
+
+async def test_bookmaker_round_trips_through_persistence(
+    session: AsyncSession, match: Match, selection: Selection, bookmaker: Bookmaker
+) -> None:
+    value_bet = _value_bet(match, selection, bookmaker=bookmaker)
+    repository = SqlAlchemyValueBetRepository(session)
+
+    await repository.save(value_bet)
+
+    results = await repository.list_by_match_id(match.id)
+
+    assert results == [value_bet]
+    assert results[0].bookmaker == bookmaker
+
+
+async def test_bookmaker_defaults_to_none_when_not_set(
+    session: AsyncSession, match: Match, selection: Selection
+) -> None:
+    value_bet = _value_bet(match, selection)
+    repository = SqlAlchemyValueBetRepository(session)
+
+    await repository.save(value_bet)
+
+    results = await repository.list_by_match_id(match.id)
+
+    assert results[0].bookmaker is None
