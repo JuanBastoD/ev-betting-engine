@@ -16,7 +16,7 @@ from src.infrastructure.persistence.session import get_session_factory, reset_se
 from src.presentation.api.dependencies import get_settings
 from src.presentation.api.exception_handlers import register_exception_handlers
 from src.presentation.api.logging_config import configure_logging
-from src.presentation.api.routers import health, pipeline, value_bets
+from src.presentation.api.routers import calibration, health, pipeline, value_bets
 from src.presentation.api.scheduler import create_scheduler
 
 logger = structlog.get_logger(__name__)
@@ -50,6 +50,7 @@ def create_app() -> FastAPI:
     app.include_router(health.router)
     app.include_router(pipeline.router)
     app.include_router(value_bets.router)
+    app.include_router(calibration.router)
     return app
 
 

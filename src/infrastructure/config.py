@@ -37,3 +37,11 @@ class Settings(BaseSettings):
     match_confirmation_mode: str = Field(default="CONFIRMATION", alias="MATCH_CONFIRMATION_MODE")
     market_weight: float = Field(default=0.5, ge=0.0, le=1.0, alias="MARKET_WEIGHT")
     pipeline_interval_seconds: int = Field(default=3600, gt=0, alias="PIPELINE_INTERVAL_SECONDS")
+
+    # --- Phase 10: calibration (Level 1) ---
+    calibration_bucket_width: float = Field(
+        default=0.1, gt=0.0, le=1.0, alias="CALIBRATION_BUCKET_WIDTH"
+    )
+    calibration_min_sample_size: int = Field(
+        default=30, ge=1, alias="CALIBRATION_MIN_SAMPLE_SIZE"
+    )

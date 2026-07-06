@@ -28,17 +28,24 @@ from functools import lru_cache
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.application.use_cases.compute_correction_factors import (
+    ComputeCorrectionFactorsUseCase,
+)
 from src.application.use_cases.detect_match_value_bets import DetectMatchValueBetsUseCase
 from src.application.use_cases.detect_player_prop_value_bets import (
     DetectPlayerPropValueBetsUseCase,
 )
+from src.application.use_cases.get_calibration_report import GetCalibrationReportUseCase
 from src.application.use_cases.ingest_local_odds import IngestLocalOddsUseCase
 from src.application.use_cases.ingest_player_stats import IngestPlayerStatsUseCase
 from src.application.use_cases.ingest_sharp_odds import IngestSharpOddsUseCase
 from src.application.use_cases.list_value_bets import ListValueBetsUseCase
 from src.application.use_cases.run_pipeline import RunPipelineUseCase
+from src.application.use_cases.settle_bet import SettleBetUseCase
 from src.domain.ports.local_odds_provider import LocalOddsProvider
 from src.domain.ports.match_repository import MatchRepository
+from src.domain.services.calibration.calibration_service import CalibrationService
+from src.domain.services.calibration.correction_factor import CorrectionFactorService
 from src.domain.services.market_model.detector import MarketValueDetector
 from src.domain.services.market_model.devig import MultiplicativeDevig
 from src.domain.services.match_model.match_value_detector import ConfirmationMode, MatchValueDetector
@@ -46,11 +53,17 @@ from src.domain.services.match_model.xg_model import DixonColesModel  # noqa: F4
 from src.domain.services.player_props.player_prop_detector import PlayerPropDetector
 from src.domain.services.player_props.player_model import PoissonPropsModel  # noqa: F401  (Prompt 10 swap point)
 from src.infrastructure.config import Settings
+from src.infrastructure.persistence.repositories.correction_factor_repository import (
+    SqlAlchemyCorrectionFactorRepository,
+)
 from src.infrastructure.persistence.repositories.match_repository import SqlAlchemyMatchRepository
 from src.infrastructure.persistence.repositories.odds_repository import SqlAlchemyOddsRepository
 from src.infrastructure.persistence.repositories.player_repository import SqlAlchemyPlayerRepository
 from src.infrastructure.persistence.repositories.player_stats_repository import (
     SqlAlchemyPlayerStatsRepository,
+)
+from src.infrastructure.persistence.repositories.settled_bet_repository import (
+    SqlAlchemySettledBetRepository,
 )
 from src.infrastructure.persistence.repositories.value_bet_repository import (
     SqlAlchemyValueBetRepository,
@@ -156,6 +169,14 @@ def build_run_pipeline_use_case(
     )
 
 
+def build_calibration_service(settings: Settings) -> CalibrationService:
+    return CalibrationService(bucket_width=settings.calibration_bucket_width)
+
+
+def build_correction_factor_service(settings: Settings) -> CorrectionFactorService:
+    return CorrectionFactorService(min_sample_size=settings.calibration_min_sample_size)
+
+
 # --- get_*: thin FastAPI Depends() adapters over the build_* functions --------
 
 
@@ -187,3 +208,33 @@ async def get_match_repository(session: AsyncSession = Depends(get_session)) -> 
     internally - `/value-bets/query` needs to resolve a match_id to a
     `Match` before it can run the pipeline for just that one match."""
     return SqlAlchemyMatchRepository(session)
+
+
+async def get_settle_bet_use_case(
+    session: AsyncSession = Depends(get_session),
+) -> SettleBetUseCase:
+    return SettleBetUseCase(
+        value_bet_repository=SqlAlchemyValueBetRepository(session),
+        settled_bet_repository=SqlAlchemySettledBetRepository(session),
+    )
+
+
+async def get_calibration_report_use_case(
+    session: AsyncSession = Depends(get_session),
+    settings: Settings = Depends(get_settings),
+) -> GetCalibrationReportUseCase:
+    return GetCalibrationReportUseCase(
+        settled_bet_repository=SqlAlchemySettledBetRepository(session),
+        calibration_service=build_calibration_service(settings),
+    )
+
+
+async def get_compute_correction_factors_use_case(
+    session: AsyncSession = Depends(get_session),
+    settings: Settings = Depends(get_settings),
+) -> ComputeCorrectionFactorsUseCase:
+    return ComputeCorrectionFactorsUseCase(
+        settled_bet_repository=SqlAlchemySettledBetRepository(session),
+        correction_factor_repository=SqlAlchemyCorrectionFactorRepository(session),
+        correction_factor_service=build_correction_factor_service(settings),
+    )
