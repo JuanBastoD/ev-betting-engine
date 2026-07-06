@@ -6,12 +6,16 @@ requires-python = ">=3.12"
 dependencies = [
     "aiosqlite>=0.22.1",
     "alembic>=1.18.5",
+    "apscheduler>=3.11.3",
     "asyncpg>=0.31.0",
+    "fastapi>=0.139.0",
     "httpx>=0.28.1",
     "playwright>=1.61.0",
     "pydantic-settings>=2.14.2",
     "sqlalchemy[asyncio]>=2.0",
+    "structlog>=26.1.0",
     "tenacity>=9.1.4",
+    "uvicorn[standard]>=0.50.2",
 ]
 
 [dependency-groups]
@@ -37,6 +41,12 @@ filterwarnings = ["error"]
 [tool.coverage.run]
 source = ["src"]
 branch = true
+# SQLAlchemy's async engine bridges sync/async internals via greenlet, which
+# spawns its own execution context - without this, coverage silently drops
+# every line that runs after an `await` on a SQLAlchemy async call (a real,
+# reproducible gap under Python 3.12's sys.monitoring-based tracer, not a
+# testing gap - the code demonstrably executes, just wasn't being measured).
+concurrency = ["thread", "greenlet"]
 
 [tool.coverage.report]
 show_missing = true
