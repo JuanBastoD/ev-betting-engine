@@ -195,6 +195,7 @@ class MatchValueDetector:
             edge=edge,
             suggested_stake=stake,
             model_source=model_source,
+            bookmaker=local_quote.bookmaker,
         )
 
 

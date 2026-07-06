@@ -143,6 +143,7 @@ class PlayerPropDetector:
             suggested_stake=stake,
             model_source=ModelSource.STATISTICAL,
             lineup_confirmed=lineup_confirmed,
+            bookmaker=prop_market.bookmaker,
         )
         return PlayerPropDetection(
             value_bet=value_bet, lineup_confirmed=lineup_confirmed, confidence=confidence

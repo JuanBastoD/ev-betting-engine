@@ -121,6 +121,7 @@ class MarketValueDetector:
             edge=edge,
             suggested_stake=stake,
             model_source=ModelSource.MARKET,
+            bookmaker=local_quote.bookmaker,
         )
 
     @staticmethod
