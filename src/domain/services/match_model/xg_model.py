@@ -13,6 +13,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
+from src.domain.entities.settled_bet import SettledBet
 from src.domain.services.match_model.team_strength import TeamStrength
 from src.domain.value_objects.probability import Probability
 
@@ -213,6 +214,62 @@ class DixonColesModel(MatchStatisticalModel):
         over = sum(p for (x, y), p in matrix.items() if (x + y) > line)
         return OverUnderProbability(
             line=line, over=Probability(_clamp_unit(over)), under=Probability(_clamp_unit(1.0 - over))
+        )
+
+
+class TrainableMatchModel(MatchStatisticalModel):
+    """Andamiaje (Prompt 10, Level 2) for a future data-driven
+    `MatchStatisticalModel`, mirroring `TrainablePropsModel` in
+    `player_model.py`: adds `fit`/`model_version` so `MatchValueDetector`
+    can be pointed at a trained model without any change to the detector
+    itself - it already only depends on `MatchStatisticalModel`.
+    """
+
+    @abstractmethod
+    def fit(self, training_data: Sequence[SettledBet]) -> None: ...
+
+    @property
+    @abstractmethod
+    def model_version(self) -> str: ...
+
+
+class MLMatchModel(TrainableMatchModel):
+    """Placeholder only - deliberately not implemented yet.
+
+    Same gate as `MLPropsModel` (`player_model.py`): do NOT implement/
+    activate until Level 1 (`CalibrationService` + `CorrectionFactorService`)
+    has shown stable calibration over at least one complete data cycle
+    (e.g. a full season or a full World Cup) AND there is enough
+    settled-bet volume per segment to fit on - a reasonable floor is a few
+    hundred (~300+) settled bets per segment. See the README's "Level 2
+    gate" section. Every method raises `NotImplementedError` so
+    instantiating/calling this by mistake fails loudly and safely rather
+    than silently returning nonsense predictions.
+    """
+
+    def fit(self, training_data: Sequence[SettledBet]) -> None:
+        raise NotImplementedError(
+            "MLMatchModel is Level 2 scaffolding only - not implemented until "
+            "Level 1 calibration is stable and enough settled-bet volume exists"
+        )
+
+    @property
+    def model_version(self) -> str:
+        raise NotImplementedError(
+            "MLMatchModel is Level 2 scaffolding only - not implemented until "
+            "Level 1 calibration is stable and enough settled-bet volume exists"
+        )
+
+    def predict_match_probabilities(
+        self,
+        home_strength: TeamStrength,
+        away_strength: TeamStrength,
+        *,
+        league_average_goals: float,
+    ) -> MatchProbabilities:
+        raise NotImplementedError(
+            "MLMatchModel is Level 2 scaffolding only - not implemented until "
+            "Level 1 calibration is stable and enough settled-bet volume exists"
         )
 
 

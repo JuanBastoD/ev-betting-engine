@@ -20,6 +20,7 @@ from src.domain.entities.injury_status_type import InjuryStatusType
 from src.domain.entities.lineup_confirmation import LineupConfirmation
 from src.domain.entities.player_match_stats import PlayerMatchStats
 from src.domain.entities.player_prop_type import PlayerPropType
+from src.domain.entities.settled_bet import SettledBet
 from src.domain.services.match_model.team_strength import TeamStrength
 from src.domain.value_objects.decimal_odds import DecimalOdds
 from src.domain.value_objects.probability import Probability
@@ -97,6 +98,73 @@ class PoissonPropsModel(PlayerPropsModel):
         if outcome == "Over":
             return Probability(over_probability)
         return Probability(_clamp_unit(1.0 - over_probability))
+
+
+class TrainablePropsModel(PlayerPropsModel):
+    """Andamiaje (Prompt 10, Level 2) for a future data-driven
+    `PlayerPropsModel`: adds `fit`/`model_version` to the Strategy interface
+    so `PlayerPropDetector` can be pointed at a trained model without any
+    change to the detector itself - it already only depends on
+    `PlayerPropsModel`.
+
+    `training_data` is a sequence of `SettledBet` (the same currency
+    `CalibrationService`/`CorrectionFactorService` consume) rather than raw
+    provider payloads - by the time Level 2 exists, settled outcomes are the
+    ground truth to fit against, not the historical stats already used by
+    `PoissonPropsModel`.
+    """
+
+    @abstractmethod
+    def fit(self, training_data: Sequence[SettledBet]) -> None: ...
+
+    @property
+    @abstractmethod
+    def model_version(self) -> str: ...
+
+
+class MLPropsModel(TrainablePropsModel):
+    """Placeholder only - deliberately not implemented yet.
+
+    Do NOT implement/activate this until Level 1 (`CalibrationService` +
+    `CorrectionFactorService`) has shown stable calibration over at least
+    one complete data cycle (e.g. a full season or a full World Cup) AND
+    there is enough settled-bet volume per segment to fit on - a reasonable
+    floor is a few hundred (~300+) settled bets per segment
+    (market_type/bookmaker/model_source/prop_type), well beyond what
+    Level 1 needs just to compute a correction factor. Fitting on less
+    risks overfitting noise instead of learning real miscalibration - see
+    the README's "Level 2 gate" section. Every method raises
+    `NotImplementedError` so instantiating/calling this by mistake fails
+    loudly and safely rather than silently returning nonsense predictions.
+    """
+
+    def fit(self, training_data: Sequence[SettledBet]) -> None:
+        raise NotImplementedError(
+            "MLPropsModel is Level 2 scaffolding only - not implemented until "
+            "Level 1 calibration is stable and enough settled-bet volume exists"
+        )
+
+    @property
+    def model_version(self) -> str:
+        raise NotImplementedError(
+            "MLPropsModel is Level 2 scaffolding only - not implemented until "
+            "Level 1 calibration is stable and enough settled-bet volume exists"
+        )
+
+    def predict_probability(
+        self,
+        *,
+        historical_stats: Sequence[PlayerMatchStats],
+        prop_type: PlayerPropType,
+        outcome: str,
+        line: float,
+        expected_minutes: float,
+        opponent_strength_factor: float = 1.0,
+    ) -> Probability:
+        raise NotImplementedError(
+            "MLPropsModel is Level 2 scaffolding only - not implemented until "
+            "Level 1 calibration is stable and enough settled-bet volume exists"
+        )
 
 
 def _metric_value(stats: PlayerMatchStats, prop_type: PlayerPropType) -> int:
