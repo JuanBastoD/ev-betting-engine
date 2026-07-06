@@ -99,6 +99,11 @@ def detect_kwargs(
 # --- CONFIRMATION mode (default) ----------------------------------------------
 
 
+def test_mode_property_reflects_the_constructor_argument() -> None:
+    assert make_detector(mode=ConfirmationMode.CONFIRMATION).mode is ConfirmationMode.CONFIRMATION
+    assert make_detector(mode=ConfirmationMode.INDEPENDENT).mode is ConfirmationMode.INDEPENDENT
+
+
 def test_confirmation_mode_generates_a_value_bet_when_both_sources_agree(
     match: Match,
     sharp_bookmaker: object,

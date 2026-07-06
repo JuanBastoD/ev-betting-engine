@@ -18,7 +18,9 @@ from src.infrastructure.persistence.repositories.value_bet_repository import (
 )
 
 
-def _value_bet(match: Match, selection: Selection, edge: float = 10.0) -> ValueBet:
+def _value_bet(
+    match: Match, selection: Selection, edge: float = 10.0, lineup_confirmed: bool | None = None
+) -> ValueBet:
     return ValueBet(
         match=match,
         selection=selection,
@@ -27,6 +29,7 @@ def _value_bet(match: Match, selection: Selection, edge: float = 10.0) -> ValueB
         edge=EdgePercentage(edge),
         suggested_stake=Stake(25.0),
         model_source=ModelSource.MARKET,
+        lineup_confirmed=lineup_confirmed,
     )
 
 
@@ -87,3 +90,17 @@ async def test_list_by_match_id_returns_empty_list_when_no_value_bets_exist(
     repository = SqlAlchemyValueBetRepository(session)
 
     assert await repository.list_by_match_id("no-such-match") == []
+
+
+async def test_lineup_confirmed_round_trips_through_persistence(
+    session: AsyncSession, match: Match, selection: Selection
+) -> None:
+    value_bet = _value_bet(match, selection, lineup_confirmed=True)
+    repository = SqlAlchemyValueBetRepository(session)
+
+    await repository.save(value_bet)
+
+    results = await repository.list_by_match_id(match.id)
+
+    assert results == [value_bet]
+    assert results[0].lineup_confirmed is True

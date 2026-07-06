@@ -134,6 +134,8 @@ class ValueBetModel(Base):
     suggested_stake: Mapped[float] = mapped_column(Float, nullable=False)
     # ModelSource (domain enum) stored as its string value.
     model_source: Mapped[str] = mapped_column(String(32), nullable=False)
+    # Only meaningful for model_source=PLAYER_PROPS bets; NULL otherwise.
+    lineup_confirmed: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
 
     match: Mapped[MatchModel] = relationship(lazy="selectin")
 

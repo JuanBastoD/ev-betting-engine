@@ -143,6 +143,7 @@ def value_bet_to_model(value_bet: ValueBet) -> ValueBetModel:
         edge_percentage=value_bet.edge.value,
         suggested_stake=value_bet.suggested_stake.amount,
         model_source=value_bet.model_source.value,
+        lineup_confirmed=value_bet.lineup_confirmed,
         **_selection_to_columns(value_bet.selection),
     )
 
@@ -155,6 +156,7 @@ def value_bet_from_model(model: ValueBetModel) -> ValueBet:
         fair_probability=Probability(model.fair_probability),
         edge=EdgePercentage(model.edge_percentage),
         suggested_stake=Stake(model.suggested_stake),
+        lineup_confirmed=model.lineup_confirmed,
         model_source=ModelSource(model.model_source),
     )
 

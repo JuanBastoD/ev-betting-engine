@@ -45,6 +45,21 @@ def test_valid_value_bet_construction(match: Match, selection: Selection) -> Non
     assert value_bet.selection is selection
     assert value_bet.edge.value == 10.0
     assert value_bet.model_source is ModelSource.MARKET
+    assert value_bet.lineup_confirmed is None
+
+
+def test_lineup_confirmed_defaults_to_none_and_is_settable(match: Match, selection: Selection) -> None:
+    value_bet = ValueBet(
+        match=match,
+        selection=selection,
+        local_odds=DecimalOdds(2.20),
+        fair_probability=Probability(0.5),
+        edge=EdgePercentage(10.0),
+        suggested_stake=Stake(25.0),
+        model_source=ModelSource.STATISTICAL,
+        lineup_confirmed=False,
+    )
+    assert value_bet.lineup_confirmed is False
 
 
 @pytest.mark.parametrize("edge_value", [0.0, -5.0])

@@ -131,8 +131,14 @@ def test_team_form_round_trip(home_team: Team) -> None:
     assert restored == team_form
 
 
+@pytest.mark.parametrize("lineup_confirmed", [None, True, False])
 def test_value_bet_round_trip(
-    match: Match, home_team: Team, away_team: Team, league: League, selection: Selection
+    match: Match,
+    home_team: Team,
+    away_team: Team,
+    league: League,
+    selection: Selection,
+    lineup_confirmed: bool | None,
 ) -> None:
     value_bet = ValueBet(
         match=match,
@@ -142,6 +148,7 @@ def test_value_bet_round_trip(
         edge=EdgePercentage(10.0),
         suggested_stake=Stake(25.0),
         model_source=ModelSource.MARKET,
+        lineup_confirmed=lineup_confirmed,
     )
 
     model = value_bet_to_model(value_bet)

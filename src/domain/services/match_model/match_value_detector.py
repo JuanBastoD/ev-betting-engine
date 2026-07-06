@@ -56,6 +56,15 @@ class MatchValueDetector:
         self._mode = mode
         self._market_weight = market_weight
 
+    @property
+    def mode(self) -> ConfirmationMode:
+        """Public so orchestrators pricing several markets per match (e.g.
+        a use case grouping quotes by market before calling `detect()` once
+        per group) can tell whether a market with no sharp coverage should
+        be skipped (CONFIRMATION - nothing to confirm against) or still
+        priced (INDEPENDENT - sharp_quotes was never required)."""
+        return self._mode
+
     def detect(
         self,
         *,
