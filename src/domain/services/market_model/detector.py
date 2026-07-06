@@ -41,6 +41,30 @@ class MarketValueDetector:
         self._kelly_fraction = kelly_fraction
         self._max_kelly_fraction = max_kelly_fraction
 
+    def fair_probabilities(self, sharp_quotes: Sequence[OddsQuote]) -> dict[str, Probability]:
+        """De-vig `sharp_quotes` (every outcome of one sharp bookmaker's
+        market for one match) into fair probabilities keyed by outcome
+        label.
+
+        Exposed as a public building block - besides `detect()` below,
+        `MatchValueDetector` (the match-statistics engine) reuses this to
+        price the same sharp market without duplicating the
+        devig-orchestration/validation logic here.
+        """
+        if not sharp_quotes:
+            raise ValueError("sharp_quotes must not be empty")
+
+        match_id = sharp_quotes[0].match.id
+        market_key = (sharp_quotes[0].selection.market_type, sharp_quotes[0].selection.line)
+        for quote in sharp_quotes:
+            self.require_same_market(quote, match_id=match_id, market_key=market_key)
+
+        fair_probabilities = self._devig_strategy.devig([quote.odds for quote in sharp_quotes])
+        return {
+            quote.selection.outcome: probability
+            for quote, probability in zip(sharp_quotes, fair_probabilities)
+        }
+
     def detect(
         self, sharp_quotes: Sequence[OddsQuote], local_quotes: Sequence[OddsQuote]
     ) -> list[ValueBet]:
@@ -52,23 +76,13 @@ class MarketValueDetector:
         also quoted, or this raises - mixing markets/matches is a caller
         bug, not something to silently drop.
         """
-        if not sharp_quotes:
-            raise ValueError("sharp_quotes must not be empty")
-
-        match = sharp_quotes[0].match
+        fair_probability_by_outcome = self.fair_probabilities(sharp_quotes)
+        match_id = sharp_quotes[0].match.id
         market_key = (sharp_quotes[0].selection.market_type, sharp_quotes[0].selection.line)
-        for quote in sharp_quotes:
-            self._require_same_market(quote, match_id=match.id, market_key=market_key)
-
-        fair_probabilities = self._devig_strategy.devig([quote.odds for quote in sharp_quotes])
-        fair_probability_by_outcome = {
-            quote.selection.outcome: probability
-            for quote, probability in zip(sharp_quotes, fair_probabilities)
-        }
 
         value_bets: list[ValueBet] = []
         for local_quote in local_quotes:
-            self._require_same_market(local_quote, match_id=match.id, market_key=market_key)
+            self.require_same_market(local_quote, match_id=match_id, market_key=market_key)
             fair_probability = self._fair_probability_for(
                 local_quote, fair_probability_by_outcome
             )
@@ -110,9 +124,12 @@ class MarketValueDetector:
         )
 
     @staticmethod
-    def _require_same_market(
+    def require_same_market(
         quote: OddsQuote, *, match_id: str, market_key: tuple[MarketType, float | None]
     ) -> None:
+        """Public so other engines pricing against the same sharp market
+        (e.g. `MatchValueDetector`) can validate a local quote the same way,
+        without re-deriving this check."""
         if quote.match.id != match_id:
             raise ValueError(
                 f"All quotes must belong to match {match_id!r}, got {quote.match.id!r}"
