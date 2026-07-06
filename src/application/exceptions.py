@@ -28,3 +28,15 @@ class PlayerPropNotFoundError(ApplicationError):
         )
         self.match_id = match_id
         self.player_name = player_name
+
+
+class ValueBetNotFoundError(ApplicationError):
+    """No persisted `ValueBet` matches the natural key (match + selection +
+    local odds) `SettleBetUseCase` was asked to settle."""
+
+    def __init__(self, match_id: str, outcome: str) -> None:
+        super().__init__(
+            f"No ValueBet found for match {match_id!r}, outcome {outcome!r} to settle"
+        )
+        self.match_id = match_id
+        self.outcome = outcome

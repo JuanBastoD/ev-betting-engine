@@ -8,7 +8,11 @@ import structlog
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from src.application.exceptions import MatchNotFoundError, PlayerPropNotFoundError
+from src.application.exceptions import (
+    MatchNotFoundError,
+    PlayerPropNotFoundError,
+    ValueBetNotFoundError,
+)
 from src.infrastructure.providers.exceptions import ProviderError
 
 logger = structlog.get_logger(__name__)
@@ -17,6 +21,7 @@ logger = structlog.get_logger(__name__)
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(MatchNotFoundError)
     @app.exception_handler(PlayerPropNotFoundError)
+    @app.exception_handler(ValueBetNotFoundError)
     async def _handle_not_found(request: Request, exc: Exception) -> JSONResponse:
         logger.info("not_found", path=request.url.path, error=str(exc))
         return JSONResponse(status_code=404, content={"detail": str(exc)})
