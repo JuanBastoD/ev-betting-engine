@@ -4,12 +4,14 @@ and size a Kelly stake - reusing `kelly_stake` (Prompt 6) and
 `calculate_prop_ev`/`exceeds_ev_threshold` (this package's thin wrapper
 around Prompt 6's `ev_calculator`) rather than duplicating either.
 
-`ValueBet` (unchanged - same entity every other detector produces) has no
-field for "was the lineup confirmed", so that signal is returned alongside
-the `ValueBet` in `PlayerPropDetection` rather than folded into it -
-extending `ValueBet`'s schema for this is a decision left to whoever
-eventually needs to query/calibrate on it (Prompt 10), same "flag, don't
-silently extend" posture as the `ValueBet`-has-no-bookmaker gap.
+`ValueBet.lineup_confirmed` (Phase 9: added once a concrete need - the
+`GET /value-bets` listing endpoint reading persisted bets back out - made
+"flag, don't silently extend" no longer the right call) carries this
+signal on the persisted entity itself. `PlayerPropDetection` still wraps
+it alongside the plain numeric `confidence` penalty (which has nowhere on
+`ValueBet` to go, and isn't needed there - it's already reflected in the
+discounted `fair_probability`/`edge`), so callers acting immediately on a
+fresh detection don't need a repository round-trip to see either.
 """
 
 from collections.abc import Sequence
@@ -140,6 +142,7 @@ class PlayerPropDetector:
             edge=edge,
             suggested_stake=stake,
             model_source=ModelSource.STATISTICAL,
+            lineup_confirmed=lineup_confirmed,
         )
         return PlayerPropDetection(
             value_bet=value_bet, lineup_confirmed=lineup_confirmed, confidence=confidence
