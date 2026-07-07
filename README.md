@@ -140,6 +140,26 @@ curl -X POST http://127.0.0.1:8000/value-bets/query \
 
 El pipeline real necesita `playwright install chromium` (scraping local) y credenciales válidas de The Odds API / Sportmonks — sin eso, `/pipeline/run` responde `502 Bad Gateway` con el error del proveedor que falló, no un crash.
 
+## Panel web (frontend)
+
+Un panel operativo de una sola pantalla (React + Vite, en `frontend/`) para listar value bets con filtros, correr el pipeline manualmente y registrar resultados (settle) sin usar `curl`/Swagger directamente.
+
+```bash
+# Backend (una terminal) - necesita CORS_ALLOWED_ORIGINS habilitado para
+# el puerto de Vite, ya viene por defecto en .env.example:
+uv run uvicorn src.presentation.api.app:app --reload
+
+# Frontend (otra terminal):
+cd frontend
+cp .env.example .env
+npm install
+npm run dev
+```
+
+Abre la URL que imprime `npm run dev` (por defecto `http://localhost:5173`). Si Vite elige otro puerto porque el 5173 está ocupado, agregalo a `CORS_ALLOWED_ORIGINS` en el `.env` del backend.
+
+Tests del frontend: `cd frontend && npm run test`.
+
 ## Ejecutar pruebas
 
 ```bash

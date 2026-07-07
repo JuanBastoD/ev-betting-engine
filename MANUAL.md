@@ -90,6 +90,8 @@ Al arrancar, la app:
 
 Documentación interactiva (Swagger) disponible en `http://127.0.0.1:8000/docs` una vez levantado.
 
+Alternativa a llamar la API a mano: el panel web en `frontend/` cubre listar value bets con filtros, correr el pipeline y registrar resultados desde el navegador — ver "Panel web (frontend)" en `README.md`.
+
 ## 5. Uso diario: correr el pipeline
 
 El pipeline hace, en orden, para cada partido: ingesta de cuotas Pinnacle → ingesta de cuotas locales (scraping) → ingesta de datos de jugador → detección de value bets de partido → detección de value bets de props. El resultado son cero o más `ValueBet` persistidas en la base de datos.
