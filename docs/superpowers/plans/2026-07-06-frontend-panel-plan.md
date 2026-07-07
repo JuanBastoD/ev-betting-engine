@@ -105,16 +105,30 @@ Expected: FAIL — `AttributeError: 'Settings' object has no attribute 'cors_all
 
 - [ ] **Step 3: Add the field to `Settings`**
 
-Open `src/infrastructure/config.py`. Change the import line at the top from:
+> **Why `NoDecode`:** pydantic-settings' `EnvSettingsSource` JSON-decodes the
+> raw env string of any `list[...]`-typed field *before* any
+> `field_validator(mode="before")` runs. Without `NoDecode`, a plain
+> comma-separated `CORS_ALLOWED_ORIGINS=a,b` raises a `JSONDecodeError`
+> instead of reaching `_split_cors_origins`. `Annotated[list[str], NoDecode]`
+> disables that pre-decode so the raw string reaches the validator. (The
+> default value is not run through the validator unless the env var is set,
+> and it is already a `list`, so it needs no splitting.) This is confirmed
+> working against the project's `pydantic-settings==2.14.2`.
+
+Open `src/infrastructure/config.py`. It currently starts with:
 
 ```python
 from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 ```
 
-to:
+Change those two lines to:
 
 ```python
+from typing import Annotated
+
 from pydantic import Field, field_validator
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 ```
 
 Add this field at the end of the class body (after `calibration_min_sample_size`):
@@ -124,8 +138,9 @@ Add this field at the end of the class body (after `calibration_min_sample_size`
     # Comma-separated list of origins the browser-based panel is served
     # from - split explicitly rather than relying on pydantic-settings'
     # JSON-array env parsing, since a plain comma list is what a human
-    # editing .env will actually type.
-    cors_allowed_origins: list[str] = Field(
+    # editing .env will actually type. NoDecode disables the JSON pre-decode
+    # so the raw string reaches _split_cors_origins (see the note above).
+    cors_allowed_origins: Annotated[list[str], NoDecode] = Field(
         default=["http://localhost:5173"], alias="CORS_ALLOWED_ORIGINS"
     )
 
@@ -144,7 +159,7 @@ Expected: PASS (all tests in the file, including the three you modified/added).
 
 - [ ] **Step 5: Write the failing CORS middleware test**
 
-Open `tests/presentation/api/test_app.py`. Add `import httpx` to the imports at the top (alongside the existing `from unittest.mock import MagicMock, patch` and `import pytest`):
+Open `tests/presentation/api/test_app.py`. Add `import httpx` and the `Settings` import to the imports at the top (alongside the existing `from unittest.mock import MagicMock, patch` and `import pytest`):
 
 ```python
 from unittest.mock import MagicMock, patch
@@ -152,35 +167,60 @@ from unittest.mock import MagicMock, patch
 import httpx
 import pytest
 
+from src.infrastructure.config import Settings
 from src.infrastructure.persistence import session as session_module
 from src.presentation.api.app import create_app, lifespan
 ```
 
-Append this test at the end of the file:
+Append these two tests at the end of the file:
 
 ```python
 async def test_cors_allows_configured_frontend_origin(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("CORS_ALLOWED_ORIGINS", "http://localhost:5173")
-    app = create_app()
+    # A NON-default origin plus a freshly-constructed Settings injected into
+    # create_app() is what proves the middleware reads the *configured* value
+    # rather than a hardcoded default. get_settings() is @lru_cache'd, so
+    # relying on it here would hand back a stale cached instance and mask the
+    # wiring; and using the default origin would pass even if the value were
+    # hardcoded. See create_app()'s `settings` parameter (Step 7).
+    monkeypatch.setenv("CORS_ALLOWED_ORIGINS", "https://panel.example.com")
+    app = create_app(settings=Settings())
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/health", headers={"Origin": "http://localhost:5173"})
+        response = await client.get(
+            "/health", headers={"Origin": "https://panel.example.com"}
+        )
 
-    assert response.headers["access-control-allow-origin"] == "http://localhost:5173"
+    assert response.headers["access-control-allow-origin"] == "https://panel.example.com"
+
+
+async def test_cors_omits_header_for_disallowed_origin(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("CORS_ALLOWED_ORIGINS", "https://panel.example.com")
+    app = create_app(settings=Settings())
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get(
+            "/health", headers={"Origin": "https://evil.example.com"}
+        )
+
+    assert "access-control-allow-origin" not in response.headers
 ```
 
-- [ ] **Step 6: Run test to verify it fails**
+- [ ] **Step 6: Run tests to verify they fail**
 
 Run: `uv run pytest tests/presentation/api/test_app.py -v --no-cov`
-Expected: FAIL — the new test fails with a `KeyError: 'access-control-allow-origin'` (no CORS middleware registered yet).
+Expected: FAIL — `test_cors_allows_configured_frontend_origin` fails with `KeyError: 'access-control-allow-origin'`, and `create_app(settings=...)` raises a `TypeError` for the unexpected keyword argument (no CORS middleware and no `settings` parameter yet).
 
 - [ ] **Step 7: Add `CORSMiddleware` to `create_app()`**
 
-Open `src/presentation/api/app.py`. Add this import alongside the existing `fastapi` import:
+Open `src/presentation/api/app.py`. Add the `CORSMiddleware` import alongside the existing `fastapi` import, and the `Settings` import alongside the other `src.infrastructure` imports:
 
 ```python
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+```
+
+```python
+from src.infrastructure.config import Settings
 ```
 
 Change `create_app()` from:
@@ -199,8 +239,13 @@ def create_app() -> FastAPI:
 to:
 
 ```python
-def create_app() -> FastAPI:
-    settings = get_settings()
+def create_app(settings: Settings | None = None) -> FastAPI:
+    # settings is injectable so a test can construct the app against a
+    # fresh, non-cached Settings and prove the CORS origins come from
+    # configuration. In production it's None and resolves to the cached
+    # get_settings() singleton (env is stable for the process lifetime).
+    if settings is None:
+        settings = get_settings()
     app = FastAPI(title="ev-betting-engine", lifespan=lifespan)
     app.add_middleware(
         CORSMiddleware,
