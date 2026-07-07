@@ -7,6 +7,7 @@ beyond what's needed to prove start()/shutdown() were called).
 
 from unittest.mock import MagicMock, patch
 
+import httpx
 import pytest
 
 from src.infrastructure.persistence import session as session_module
@@ -47,3 +48,13 @@ async def test_lifespan_initializes_and_tears_down_the_db_pool_and_scheduler() -
 
     fake_scheduler.shutdown.assert_called_once_with(wait=False)
     assert session_module._session_factory is None
+
+
+async def test_cors_allows_configured_frontend_origin(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("CORS_ALLOWED_ORIGINS", "http://localhost:5173")
+    app = create_app()
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/health", headers={"Origin": "http://localhost:5173"})
+
+    assert response.headers["access-control-allow-origin"] == "http://localhost:5173"

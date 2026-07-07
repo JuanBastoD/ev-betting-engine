@@ -1,5 +1,7 @@
-from pydantic import Field
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from typing import Annotated
+
+from pydantic import Field, field_validator
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -45,3 +47,20 @@ class Settings(BaseSettings):
     calibration_min_sample_size: int = Field(
         default=30, ge=1, alias="CALIBRATION_MIN_SAMPLE_SIZE"
     )
+
+    # --- Frontend panel (CORS) ---
+    # Comma-separated list of origins the browser-based panel is served
+    # from - split explicitly rather than relying on pydantic-settings'
+    # JSON-array env parsing, since a plain comma list is what a human
+    # editing .env will actually type. NoDecode disables the JSON pre-decode
+    # so the raw string reaches _split_cors_origins (see the note above).
+    cors_allowed_origins: Annotated[list[str], NoDecode] = Field(
+        default=["http://localhost:5173"], alias="CORS_ALLOWED_ORIGINS"
+    )
+
+    @field_validator("cors_allowed_origins", mode="before")
+    @classmethod
+    def _split_cors_origins(cls, value: str | list[str]) -> list[str]:
+        if isinstance(value, str):
+            return [origin.strip() for origin in value.split(",") if origin.strip()]
+        return value

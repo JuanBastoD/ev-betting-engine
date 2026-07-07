@@ -21,6 +21,7 @@ def _isolate_env(monkeypatch: pytest.MonkeyPatch) -> None:
         "MATCH_CONFIRMATION_MODE",
         "MARKET_WEIGHT",
         "PIPELINE_INTERVAL_SECONDS",
+        "CORS_ALLOWED_ORIGINS",
     ):
         monkeypatch.delenv(key, raising=False)
 
@@ -61,6 +62,7 @@ def test_settings_applies_defaults_for_optional_values(
     assert settings.match_confirmation_mode == "CONFIRMATION"
     assert settings.market_weight == 0.5
     assert settings.pipeline_interval_seconds == 3600
+    assert settings.cors_allowed_origins == ["http://localhost:5173"]
 
 
 def test_settings_reads_overridden_values_from_env(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
@@ -77,6 +79,7 @@ def test_settings_reads_overridden_values_from_env(monkeypatch: pytest.MonkeyPat
     monkeypatch.setenv("MATCH_CONFIRMATION_MODE", "INDEPENDENT")
     monkeypatch.setenv("MARKET_WEIGHT", "0.7")
     monkeypatch.setenv("PIPELINE_INTERVAL_SECONDS", "1800")
+    monkeypatch.setenv("CORS_ALLOWED_ORIGINS", "https://panel.example.com")
 
     settings = Settings()
 
@@ -91,6 +94,7 @@ def test_settings_reads_overridden_values_from_env(monkeypatch: pytest.MonkeyPat
     assert settings.match_confirmation_mode == "INDEPENDENT"
     assert settings.market_weight == 0.7
     assert settings.pipeline_interval_seconds == 1800
+    assert settings.cors_allowed_origins == ["https://panel.example.com"]
 
 
 def test_settings_requires_database_url_and_odds_api_key(
@@ -157,3 +161,20 @@ def test_settings_rejects_non_positive_pipeline_interval(
 
     with pytest.raises(ValidationError):
         Settings()
+
+
+def test_settings_parses_comma_separated_cors_origins(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    _set_required_env(monkeypatch)
+    monkeypatch.setenv(
+        "CORS_ALLOWED_ORIGINS", "http://localhost:5173,https://panel.example.com"
+    )
+
+    settings = Settings()
+
+    assert settings.cors_allowed_origins == [
+        "http://localhost:5173",
+        "https://panel.example.com",
+    ]

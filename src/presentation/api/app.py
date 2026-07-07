@@ -11,6 +11,7 @@ from contextlib import asynccontextmanager
 
 import structlog
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from src.infrastructure.persistence.session import get_session_factory, reset_session_factory
 from src.presentation.api.dependencies import get_settings
@@ -45,7 +46,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 
 def create_app() -> FastAPI:
+    settings = get_settings()
     app = FastAPI(title="ev-betting-engine", lifespan=lifespan)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_allowed_origins,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
     register_exception_handlers(app)
     app.include_router(health.router)
     app.include_router(pipeline.router)
