@@ -13,6 +13,7 @@ import structlog
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from src.infrastructure.config import Settings
 from src.infrastructure.persistence.session import get_session_factory, reset_session_factory
 from src.presentation.api.dependencies import get_settings
 from src.presentation.api.exception_handlers import register_exception_handlers
@@ -45,8 +46,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.info("app_shutdown_complete")
 
 
-def create_app() -> FastAPI:
-    settings = get_settings()
+def create_app(settings: Settings | None = None) -> FastAPI:
+    # settings is injectable so a test can construct the app against a
+    # fresh, non-cached Settings and prove the CORS origins come from
+    # configuration. In production it's None and resolves to the cached
+    # get_settings() singleton (env is stable for the process lifetime).
+    if settings is None:
+        settings = get_settings()
     app = FastAPI(title="ev-betting-engine", lifespan=lifespan)
     app.add_middleware(
         CORSMiddleware,

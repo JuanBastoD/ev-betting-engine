@@ -10,6 +10,7 @@ from unittest.mock import MagicMock, patch
 import httpx
 import pytest
 
+from src.infrastructure.config import Settings
 from src.infrastructure.persistence import session as session_module
 from src.presentation.api.app import create_app, lifespan
 
@@ -51,10 +52,30 @@ async def test_lifespan_initializes_and_tears_down_the_db_pool_and_scheduler() -
 
 
 async def test_cors_allows_configured_frontend_origin(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("CORS_ALLOWED_ORIGINS", "http://localhost:5173")
-    app = create_app()
+    # A NON-default origin plus a freshly-constructed Settings injected into
+    # create_app() is what proves the middleware reads the *configured* value
+    # rather than a hardcoded default. get_settings() is @lru_cache'd, so
+    # relying on it here would hand back a stale cached instance and mask the
+    # wiring; and using the default origin would pass even if the value were
+    # hardcoded.
+    monkeypatch.setenv("CORS_ALLOWED_ORIGINS", "https://panel.example.com")
+    app = create_app(settings=Settings())
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/health", headers={"Origin": "http://localhost:5173"})
+        response = await client.get(
+            "/health", headers={"Origin": "https://panel.example.com"}
+        )
 
-    assert response.headers["access-control-allow-origin"] == "http://localhost:5173"
+    assert response.headers["access-control-allow-origin"] == "https://panel.example.com"
+
+
+async def test_cors_omits_header_for_disallowed_origin(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("CORS_ALLOWED_ORIGINS", "https://panel.example.com")
+    app = create_app(settings=Settings())
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get(
+            "/health", headers={"Origin": "https://evil.example.com"}
+        )
+
+    assert "access-control-allow-origin" not in response.headers
