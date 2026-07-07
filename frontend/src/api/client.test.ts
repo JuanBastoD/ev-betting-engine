@@ -21,11 +21,11 @@ describe("apiGet", () => {
       )
     );
 
-    await expect(apiGet("/value-bets")).rejects.toMatchObject({
-      name: "ApiError",
-      status: 404,
-      message: "no encontrado",
-    });
+    const error = await apiGet("/value-bets").catch((e) => e) as unknown;
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect((error as ApiError).status).toBe(404);
+    expect((error as ApiError).message).toBe("no encontrado");
   });
 
   it("throws NetworkError when the request fails at the network level", async () => {
