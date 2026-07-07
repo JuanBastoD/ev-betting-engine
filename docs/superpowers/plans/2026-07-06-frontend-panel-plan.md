@@ -17,6 +17,7 @@
 - TypeScript types in `frontend/src/api/types.ts` are exact snake_case mirrors of the Pydantic schemas in `src/presentation/api/schemas.py` — no camelCase conversion layer, no fields invented that the API doesn't return.
 - `frontend/` is a fully standalone npm project — no shared build tooling/config with the Python backend beyond living in the same git repo. The only backend change in this plan is CORS (Task 1).
 - HTTP is always mocked with `msw`'s `setupServer` (Node integration) in frontend tests, never a real network call — mirrors the backend's own `respx` convention (mock at the HTTP boundary).
+- **Every frontend task must pass `npm run build` (which runs `tsc -b && vite build`), not only `npm run test`.** Vitest transpiles via esbuild and does NOT type-check, so a `tsc` error (e.g. an unused import under `noUnusedLocals: true`) can pass tests while breaking the build. Run `npm run build` (or at least `npx tsc -b`) before committing any frontend task, and treat a type error as a task failure.
 - Calibration report / correction-factor recompute / multi-page routing are explicitly out of scope (deferred per the design spec) — do not add them opportunistically while implementing these tasks.
 
 ---
@@ -423,13 +424,27 @@ Create `frontend/src/setupTests.ts`:
 
 ```typescript
 import "@testing-library/jest-dom/vitest";
+import { cleanup } from "@testing-library/react";
 import { afterAll, afterEach, beforeAll } from "vitest";
 import { server } from "./test/server";
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
-afterEach(() => server.resetHandlers());
+// React Testing Library's automatic per-test cleanup only self-registers
+// when `afterEach` is a global, which it is not under `globals: false`.
+// Call it explicitly here so component tests don't leak mounted DOM into
+// each other (otherwise a second render() duplicates roles/text and breaks
+// getByRole/getByText queries).
+afterEach(() => {
+  server.resetHandlers();
+  cleanup();
+});
 afterAll(() => server.close());
 ```
+
+> **Note (added during execution):** the `cleanup()` call above is required
+> precisely because this project runs with `globals: false`. Every component
+> test file below (Tasks 6-9) relies on this shared cleanup and must NOT add
+> its own `afterEach(cleanup)`.
 
 - [ ] **Step 11: Remove the default Vite demo content**
 
@@ -603,11 +618,11 @@ describe("apiGet", () => {
       )
     );
 
-    await expect(apiGet("/value-bets")).rejects.toMatchObject({
-      name: "ApiError",
-      status: 404,
-      message: "no encontrado",
-    });
+    const error = await apiGet("/value-bets").catch((e) => e);
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error.status).toBe(404);
+    expect(error.message).toBe("no encontrado");
   });
 
   it("throws NetworkError when the request fails at the network level", async () => {
