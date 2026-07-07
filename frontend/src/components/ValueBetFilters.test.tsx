@@ -1,11 +1,9 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { ValueBetFilters as Filters } from "../api/types";
 import { ValueBetFilters } from "./ValueBetFilters";
-
-afterEach(() => cleanup());
 
 function renderControlled(initial: Filters = {}) {
   const handleChange = vi.fn();
